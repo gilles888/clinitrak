@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- Activation des extensions PostgreSQL nécessaires -->
+    <changeSet id="0-extensions" author="clinitrak">
+        <sql>CREATE EXTENSION IF NOT EXISTS "pgcrypto";</sql>
+        <sql>CREATE EXTENSION IF NOT EXISTS "uuid-ossp";</sql>
+    </changeSet>
+
+    <!-- V1 : Schéma initial complet du study-service -->
+    <include file="V1__init_study.sql" relativeToChangelogFile="true"/>
+
+</databaseChangeLog>

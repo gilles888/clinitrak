@@ -1,0 +1,286 @@
+version: '3.9'
+
+# ============================================================
+# CliniTrak — Docker Compose (environnement de développement)
+# ============================================================
+# Usage :
+#   docker compose up -d                  # Démarrer tous les services
+#   docker compose logs -f auth-service   # Suivre les logs d'un service
+#   docker compose down -v                # Arrêter et supprimer les volumes
+# ============================================================
+
+services:
+
+  # ----------------------------------------------------------
+  # PostgreSQL 16
+  # ----------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: clinitrak-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-clinitrak}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-clinitrak_dev}
+      POSTGRES_DB: ${DB_NAME:-clinitrak_auth}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/00-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-clinitrak} -d ${DB_NAME:-clinitrak_auth}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - clinitrak-net
+
+  # ----------------------------------------------------------
+  # Redis 7 (cache + sessions)
+  # ----------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: clinitrak-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-} --appendonly yes
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - clinitrak-net
+
+  # ----------------------------------------------------------
+  # MailHog (intercepteur email pour le développement)
+  # ----------------------------------------------------------
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: clinitrak-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+    networks:
+      - clinitrak-net
+
+  # ----------------------------------------------------------
+  # MinIO (stockage S3-compatible pour les documents)
+  # ----------------------------------------------------------
+  minio:
+    image: minio/minio:latest
+    container_name: clinitrak-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-clinitrak_minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-clinitrak_minio_secret}
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - clinitrak-net
+
+  # ----------------------------------------------------------
+  # Auth Service
+  # ----------------------------------------------------------
+  clinitrak-auth:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: clinitrak-auth
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-clinitrak_auth}
+      DB_USER: ${DB_USER:-clinitrak}
+      DB_PASSWORD: ${DB_PASSWORD:-clinitrak_dev}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      JWT_SECRET: ${JWT_SECRET:-TW91dmlzLXRlc3QtY2xpbml0cmFrLXNlY3JldC1rZXktbXVzdC1iZS1hdC1sZWFzdC0zMi1ieXRlcw==}
+      JWT_ACCESS_EXPIRATION_MS: ${JWT_ACCESS_EXPIRATION_MS:-900000}
+      SERVER_PORT: 8081
+      CLINITRAK_ROOT_DOMAIN: ${CLINITRAK_ROOT_DOMAIN:-localhost}
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/api/v1/auth/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - clinitrak-net
+
+  # ----------------------------------------------------------
+  # Study Service
+  # ----------------------------------------------------------
+  clinitrak-study:
+    build:
+      context: ./study-service
+      dockerfile: Dockerfile
+    container_name: clinitrak-study
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: clinitrak_study
+      DB_USER: ${DB_USER:-clinitrak}
+      DB_PASSWORD: ${DB_PASSWORD:-clinitrak_dev}
+      JWT_SECRET: ${JWT_SECRET}
+      SERVER_PORT: 8082
+      CLINITRAK_ROOT_DOMAIN: ${CLINITRAK_ROOT_DOMAIN:-localhost}
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      clinitrak-auth:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - clinitrak-net
+
+  # ----------------------------------------------------------
+  # Ethics Service
+  # ----------------------------------------------------------
+  clinitrak-ethics:
+    build:
+      context: ./ethics-service
+      dockerfile: Dockerfile
+    container_name: clinitrak-ethics
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: clinitrak_ethics
+      DB_USER: ${DB_USER:-clinitrak}
+      DB_PASSWORD: ${DB_PASSWORD:-clinitrak_dev}
+      JWT_SECRET: ${JWT_SECRET}
+      SERVER_PORT: 8083
+      CLINITRAK_ROOT_DOMAIN: ${CLINITRAK_ROOT_DOMAIN:-localhost}
+      STUDY_SERVICE_URL: http://clinitrak-study:8082
+      MAIL_HOST: ${MAIL_HOST:-mailhog}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+    ports:
+      - "8083:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      clinitrak-study:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    networks:
+      - clinitrak-net
+
+  # ----------------------------------------------------------
+  # CTC Service
+  # ----------------------------------------------------------
+  clinitrak-ctc:
+    build:
+      context: ./ctc-service
+      dockerfile: Dockerfile
+    container_name: clinitrak-ctc
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_HOST: postgres
+      DB_PORT: 5432
+      CTC_DB_NAME: ${CTC_DB_NAME:-clinitrak_ctc}
+      DB_USERNAME: ${DB_USERNAME:-clinitrak}
+      DB_PASSWORD: ${DB_PASSWORD:-clinitrak}
+      JWT_SECRET: ${JWT_SECRET:-changeme-clinitrak-secret-key-must-be-at-least-256-bits-long}
+      STUDY_SERVICE_URL: http://clinitrak-study:8082
+    ports:
+      - "8084:8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clinitrak-study:
+        condition: service_started
+    networks:
+      - clinitrak-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8084/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ----------------------------------------------------------
+  # API Gateway
+  # ----------------------------------------------------------
+  clinitrak-gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: clinitrak-gateway
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      AUTH_SERVICE_URL: http://clinitrak-auth:8081
+      SERVER_PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      clinitrak-auth:
+        condition: service_healthy
+    networks:
+      - clinitrak-net
+
+# ----------------------------------------------------------
+# Volumes persistants
+# ----------------------------------------------------------
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+
+# ----------------------------------------------------------
+# Réseau interne isolé
+# ----------------------------------------------------------
+networks:
+  clinitrak-net:
+    driver: bridge
+    name: clinitrak-network

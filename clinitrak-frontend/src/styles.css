@@ -1,0 +1,118 @@
+/* ============================================================
+   CliniTrak — Styles globaux
+   ============================================================ */
+
+/* Tailwind CSS */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* PrimeNG Theme */
+@import "primeicons/primeicons.css";
+@import "primeng/resources/themes/lara-light-blue/theme.css";
+@import "primeng/resources/primeng.css";
+
+/* Typographie */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* ============================================================
+   Reset & Base
+   ============================================================ */
+:root {
+  --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  --primary-color: #2563eb;
+  --surface-ground: #f8fafc;
+  --border-radius: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-family);
+  background-color: var(--surface-ground);
+  color: #1e293b;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================================
+   Surcharges PrimeNG (adaptation à la charte CliniTrak)
+   ============================================================ */
+
+/* Inputs PrimeNG */
+.p-inputtext {
+  border-radius: var(--border-radius) !important;
+  border-color: #d1d5db !important;
+  width: 100%;
+}
+
+.p-inputtext:focus {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2) !important;
+}
+
+/* Boutons PrimeNG */
+.p-button {
+  border-radius: var(--border-radius) !important;
+  font-weight: 500 !important;
+  padding: 0.625rem 1.25rem !important;
+}
+
+/* Cards PrimeNG */
+.p-card {
+  border-radius: 12px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+
+.p-card .p-card-header {
+  font-weight: 600 !important;
+  color: #1e293b !important;
+}
+
+/* Messages PrimeNG */
+.p-message {
+  border-radius: var(--border-radius) !important;
+}
+
+/* ============================================================
+   Utilitaires CliniTrak spécifiques
+   ============================================================ */
+
+/* Scroll personnalisé */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Badge de statut médical */
+.ct-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.ct-badge-active   { background: #dcfce7; color: #166534; }
+.ct-badge-pending  { background: #fef9c3; color: #854d0e; }
+.ct-badge-closed   { background: #f1f5f9; color: #475569; }
+.ct-badge-rejected { background: #fee2e2; color: #991b1b; }

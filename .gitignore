@@ -1,0 +1,39 @@
+# ============================================================
+# CliniTrak — .gitignore
+# ============================================================
+
+# Secrets — NE JAMAIS committer !
+.env
+*.env.local
+*.pem
+*.key
+
+# Maven
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# Node / Angular
+clinitrak-frontend/node_modules/
+clinitrak-frontend/dist/
+clinitrak-frontend/.angular/
+clinitrak-frontend/.cache/
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.classpath
+.project
+.settings/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
