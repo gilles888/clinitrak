@@ -1,6 +1,5 @@
 import {
   Component,
-  effect,
   inject,
   OnInit,
   signal,
@@ -8,7 +7,7 @@ import {
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { debounceTime, distinctUntilChanged, Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged, filter } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ButtonModule } from 'primeng/button';
 import { CalendarModule } from 'primeng/calendar';
@@ -303,15 +302,17 @@ export class DispensationFormComponent implements OnInit {
   /** Date d'aujourd'hui pour la borne max du calendrier. */
   protected readonly today = new Date();
 
-  /** Subject pour le debounce de la recherche d'historique patient. */
-  private readonly patientCode$ = new Subject<string>();
-
   // ─────────────────────────────────────────────────────────────
 
   constructor() {
-    // Debounce sur le code patient pour charger l'historique
-    this.patientCode$
-      .pipe(debounceTime(500), distinctUntilChanged(), takeUntilDestroyed())
+    // Debounce sur valueChanges du champ patientCode pour charger l'historique
+    this.form.get('patientCode')!.valueChanges
+      .pipe(
+        debounceTime(500),
+        distinctUntilChanged(),
+        filter((v): v is string => typeof v === 'string'),
+        takeUntilDestroyed(),
+      )
       .subscribe(code => {
         if (code.trim().length > 2) {
           this.loadPatientHistory(code.trim());
@@ -319,12 +320,6 @@ export class DispensationFormComponent implements OnInit {
           this.patientHistory.set([]);
         }
       });
-
-    // Écoute le signal patientCode via effect
-    effect(() => {
-      const code = this.form.get('patientCode')?.value ?? '';
-      this.patientCode$.next(code);
-    });
   }
 
   ngOnInit(): void {
