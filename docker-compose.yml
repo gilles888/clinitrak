@@ -244,6 +244,43 @@ services:
       start_period: 60s
 
   # ----------------------------------------------------------
+  # Pharmacy Service
+  # ----------------------------------------------------------
+  clinitrak-pharmacy:
+    build:
+      context: ./pharmacy-service
+      dockerfile: Dockerfile
+    container_name: clinitrak-pharmacy
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_HOST: postgres
+      DB_PORT: 5432
+      PHARMACY_DB_NAME: ${PHARMACY_DB_NAME:-clinitrak_pharmacy}
+      DB_USERNAME: ${DB_USERNAME:-clinitrak}
+      DB_PASSWORD: ${DB_PASSWORD:-clinitrak}
+      JWT_SECRET: ${JWT_SECRET:-changeme-clinitrak-secret-key-must-be-at-least-256-bits-long}
+      PHARMACY_ENCRYPTION_KEY: ${PHARMACY_ENCRYPTION_KEY:-0123456789abcdef0123456789abcdef}
+      STUDY_SERVICE_URL: http://clinitrak-study:8082
+      MAIL_HOST: ${MAIL_HOST:-mailhog}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+    ports:
+      - "8085:8085"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clinitrak-study:
+        condition: service_started
+    networks:
+      - clinitrak-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8085/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ----------------------------------------------------------
   # API Gateway
   # ----------------------------------------------------------
   clinitrak-gateway:

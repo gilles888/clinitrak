@@ -601,6 +601,139 @@ ctc_quality_events (1) ──── (*) [liée à clinical_studies via study_id 
 
 ---
 
+---
+
+## Base de données pharmacy-service (clinitrak_pharmacy)
+
+**SGBD** : PostgreSQL 16
+**Nom** : `clinitrak_pharmacy`
+**Port service** : 8085
+**Migrations** : Liquibase (`pharmacy-service/src/main/resources/db/changelog/`)
+
+### Diagramme ERD (textuel)
+
+```
+pharmacy_drugs (1) ──── (*) pharmacy_stocks
+pharmacy_drugs (1) ──── (*) pharmacy_dispensations
+pharmacy_drugs (1) ──── (*) pharmacy_billing
+pharmacy_drugs (1) ──── (*) pharmacy_emergency_unblinding (via patientCode cross-service)
+```
+
+### Table `pharmacy_drugs` (16 colonnes)
+
+| Colonne | Type | Contraintes | Description |
+|---------|------|-------------|-------------|
+| id | UUID | PK, DEFAULT gen_random_uuid() | Identifiant unique |
+| tenant_id | UUID | NOT NULL, INDEX | Isolation multi-tenant |
+| study_id | UUID | NOT NULL | Référence vers study-service (pas de FK cross-service) |
+| drug_name | VARCHAR(255) | NOT NULL | Nom commercial du médicament |
+| inn | VARCHAR(255) | NULLABLE | Dénomination commune internationale |
+| dosage | VARCHAR(100) | NULLABLE | Ex: 500mg, 10mg/ml |
+| form | VARCHAR(30) | NOT NULL | TABLET / CAPSULE / INJECTION / SOLUTION / CREAM / OTHER |
+| manufacturer | VARCHAR(255) | NULLABLE | Nom du fabricant |
+| batch_number | VARCHAR(100) | NULLABLE | Numéro de lot |
+| expiry_date | DATE | NULLABLE | Date de péremption |
+| storage_conditions | VARCHAR(500) | NULLABLE | Conditions de conservation |
+| category | VARCHAR(20) | NOT NULL | IMP / NIMP / PLACEBO |
+| regulatory_status | VARCHAR(20) | NOT NULL, DEFAULT 'PENDING' | PENDING / APPROVED / EXPIRED / RECALLED |
+| randomization_code_encrypted | VARCHAR(512) | NULLABLE | randomizationCode chiffré AES-256 (clé PHARMACY_ENCRYPTION_KEY) |
+| deleted | BOOLEAN | NOT NULL, DEFAULT FALSE | Suppression logique |
+| version | BIGINT | NOT NULL | Optimistic locking |
+| created_at / updated_at | TIMESTAMPTZ | NOT NULL | Auto (trigger) |
+
+**Note chiffrement** : `randomization_code_encrypted` contient le code de randomisation chiffré via AES/ECB/PKCS5Padding. La clé de 32 bytes est fournie par la variable d'environnement `PHARMACY_ENCRYPTION_KEY`. Le déchiffrement n'est effectué qu'en cas de levée d'aveugle d'urgence approuvée.
+**Index** : `tenant_id`, `study_id`, `category`, `regulatory_status`
+
+### Table `pharmacy_stocks` (16 colonnes)
+
+| Colonne | Type | Contraintes | Description |
+|---------|------|-------------|-------------|
+| id | UUID | PK, DEFAULT gen_random_uuid() | Identifiant unique |
+| tenant_id | UUID | NOT NULL, INDEX | Isolation multi-tenant |
+| drug_id | UUID | FK pharmacy_drugs(id), NOT NULL | Médicament concerné |
+| study_id | UUID | NOT NULL | Référence vers study-service |
+| quantity | INT | NOT NULL, >= 0 | Quantité en stock |
+| unit | VARCHAR(50) | NOT NULL | Unité (comprimés, flacons, etc.) |
+| received_date | DATE | NOT NULL | Date de réception |
+| expiry_date | DATE | NOT NULL | Date de péremption du lot |
+| batch_number | VARCHAR(100) | NOT NULL | Numéro de lot reçu |
+| location | VARCHAR(255) | NULLABLE | Emplacement de stockage (armoire, réfrigérateur…) |
+| status | VARCHAR(20) | NOT NULL, DEFAULT 'QUARANTINE' | QUARANTINE → AVAILABLE → DISPENSED / RETURNED / DESTROYED |
+| deleted | BOOLEAN | NOT NULL, DEFAULT FALSE | Suppression logique |
+| version | BIGINT | NOT NULL | Optimistic locking |
+| created_at / updated_at | TIMESTAMPTZ | NOT NULL | Auto (trigger) |
+
+**Cycle de vie des statuts** : Tout stock réceptionné démarre en `QUARANTINE`. Après libération qualité, il passe à `AVAILABLE`. Il peut ensuite être `DISPENSED` (dispensé à un patient), `RETURNED` (retourné), ou `DESTROYED`.
+**Index** : `tenant_id`, `drug_id`, `study_id`, `status`, `expiry_date`
+
+### Table `pharmacy_dispensations` (16 colonnes)
+
+| Colonne | Type | Contraintes | Description |
+|---------|------|-------------|-------------|
+| id | UUID | PK, DEFAULT gen_random_uuid() | Identifiant unique |
+| tenant_id | UUID | NOT NULL, INDEX | Isolation multi-tenant |
+| drug_id | UUID | FK pharmacy_drugs(id), NOT NULL | Médicament dispensé |
+| stock_id | UUID | FK pharmacy_stocks(id), NOT NULL | Lot de stock utilisé |
+| study_id | UUID | NOT NULL | Référence vers study-service |
+| patient_code | VARCHAR(100) | NOT NULL | Code pseudonyme patient (RGPD) |
+| dispensation_date | DATE | NOT NULL | Date de dispensation |
+| pharmacist_id | UUID | NOT NULL | Identifiant du pharmacien dispensateur |
+| prescriber_id | UUID | NOT NULL | Identifiant du médecin prescripteur |
+| quantity | INT | NOT NULL, > 0 | Quantité dispensée |
+| prescription | VARCHAR(500) | NULLABLE | Référence ordonnance |
+| visit_number | VARCHAR(50) | NULLABLE | Numéro de visite de l'essai |
+| notes | TEXT | NULLABLE | Notes libres |
+| deleted | BOOLEAN | NOT NULL, DEFAULT FALSE | Suppression logique |
+| version | BIGINT | NOT NULL | Optimistic locking |
+| created_at / updated_at | TIMESTAMPTZ | NOT NULL | Auto (trigger) |
+
+**Décrémentation automatique** : Lors de la création d'une dispensation, le `DispensationService` décrémente automatiquement la `quantity` du stock correspondant dans `pharmacy_stocks`. Si le stock est épuisé après dispensation, le statut passe à `DISPENSED`.
+**Index** : `tenant_id`, `drug_id`, `study_id`, `patient_code`, `dispensation_date DESC`
+
+### Table `pharmacy_billing` (12 colonnes)
+
+| Colonne | Type | Contraintes | Description |
+|---------|------|-------------|-------------|
+| id | UUID | PK, DEFAULT gen_random_uuid() | Identifiant unique |
+| tenant_id | UUID | NOT NULL, INDEX | Isolation multi-tenant |
+| study_id | UUID | NOT NULL | Référence vers study-service |
+| drug_id | UUID | FK pharmacy_drugs(id), NOT NULL | Médicament facturé |
+| dispensation_id | UUID | FK pharmacy_dispensations(id), NULLABLE | Dispensation associée |
+| amount | NUMERIC(15,2) | NOT NULL | Montant facturé |
+| currency | VARCHAR(10) | NOT NULL, DEFAULT 'EUR' | Devise |
+| billing_status | VARCHAR(20) | NOT NULL, DEFAULT 'DRAFT' | DRAFT / SENT / PAID / DISPUTED / CANCELLED |
+| invoice_reference | VARCHAR(100) | NULLABLE | Référence de la facture |
+| deleted | BOOLEAN | NOT NULL, DEFAULT FALSE | Suppression logique |
+| created_at / updated_at | TIMESTAMPTZ | NOT NULL | Auto (trigger) |
+
+**Index** : `tenant_id`, `study_id`, `billing_status`
+
+### Table `pharmacy_emergency_unblinding` (13 colonnes)
+
+| Colonne | Type | Contraintes | Description |
+|---------|------|-------------|-------------|
+| id | UUID | PK, DEFAULT gen_random_uuid() | Identifiant unique |
+| tenant_id | UUID | NOT NULL, INDEX | Isolation multi-tenant |
+| study_id | UUID | NOT NULL | Référence vers study-service |
+| drug_id | UUID | FK pharmacy_drugs(id), NOT NULL | Médicament concerné |
+| patient_code | VARCHAR(100) | NOT NULL | Code pseudonyme patient |
+| requested_by | UUID | NOT NULL | Identifiant du demandeur |
+| approved_by | UUID | NULLABLE | Identifiant de l'approbateur (NULL jusqu'à approbation) |
+| reason | TEXT | NOT NULL | Justification médicale de la levée d'aveugle |
+| treatment | VARCHAR(512) | NULLABLE | Traitement révélé après déchiffrement AES (NULL jusqu'à approve) |
+| approved_at | TIMESTAMPTZ | NULLABLE | Horodatage de l'approbation |
+| deleted | BOOLEAN | NOT NULL, DEFAULT FALSE | Suppression logique |
+| version | BIGINT | NOT NULL | Optimistic locking |
+| created_at / updated_at | TIMESTAMPTZ | NOT NULL | Auto (trigger) |
+
+**Processus en 2 étapes** :
+1. `POST /emergency-unblinding` : crée l'enregistrement avec `treatment = NULL` et `approved_by = NULL`
+2. `PATCH /emergency-unblinding/{id}/approve` : l'`EmergencyUnblindingService` déchiffre `randomization_code_encrypted` via AES, renseigne `treatment` et `approved_by`, et horodate `approved_at`
+
+**Index** : `tenant_id`, `study_id`, `patient_code`, `approved_at`
+
+---
+
 ## Convention pour les nouveaux services
 
 Chaque nouveau service doit avoir sa propre base de données :

@@ -11,6 +11,46 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ---
 
+## [0.5.0] — 2026-05-11
+
+### Session 5 — pharmacy-service complet + module Angular Pharmacie
+
+**Agents impliqués** : backend, frontend, devops (parallèle)
+
+#### Ajouté — pharmacy-service (backend)
+
+- `pharmacy-service/pom.xml` : Apache POI 5.2.5, Flying Saucer 9.4.0, Spring Mail
+- **Enums** (6) : DrugCategory, DrugRegulatoryStatus, StockStatus, DrugForm, BillingStatus, AlertType
+- **Entités JPA** (5) : InvestigationalDrug (randomizationCode AES-256), DrugStock, Dispensation, PharmacyBilling, EmergencyUnblinding
+- **Repositories** (5) : findLowStock @Query, requêtes expiry date
+- **Services** (7) : EncryptionService (AES), DrugService, DrugStockService (import CSV/XLSX Apache POI), DispensationService (décrémente stock), EmergencyUnblindingService (double validation + déchiffrement), PharmacyAlertService (@Scheduled J-7/J-30/stock), PdfReportService (Flying Saucer), PharmacyDashboardService
+- **Controllers** (4) : DrugController, StockController (+ import multipart), DispensationController, DashboardController (dashboard + alerts + PDF + unblinding)
+- **Liquibase** : V1__init_pharmacy.sql (5 tables, 8 index, 5 triggers)
+- **Tests** : DrugServiceTest, DispensationServiceTest, PharmacyDrugControllerTest
+
+#### Ajouté — clinitrak-frontend (Angular)
+
+- `core/models/pharmacy.model.ts` : 6 enums + 7 interfaces + severity maps + options dropdown
+- `core/services/pharmacy.service.ts` : 11 méthodes HTTP
+- `features/pharmacy/pharmacy.routes.ts` : 7 routes lazy-loaded
+- `pharmacy-dashboard/` : 6 KPIs + alertes urgentes
+- `drug-stock/` : p-table + coloration péremption CSS + dialog statut
+- `dispensation-form/` : ReactiveForm + historique patient
+- `stock-receipt/` : saisie manuelle + import fichier natif HTML5
+- `expiry-alert/` : alertes groupées p-message + p-badge par type
+- `emergency-unblinding/` : dialog 2 étapes + confirmation sécurisée + révélation traitement
+- `pharmacy-report/` : téléchargement PDF blob
+
+#### Ajouté — DevOps
+
+- `pharmacy-service/Dockerfile` : multi-stage Maven + JRE Alpine (port 8085)
+- `docker-compose.yml` : service `clinitrak-pharmacy` avec PHARMACY_ENCRYPTION_KEY
+- `docs/api/pharmacy-service.md` : 12 endpoints + enums + fonctionnalités spéciales
+- `docs/database/schema.md` : 5 tables pharmacy-service
+- `.env.example` : PHARMACY_DB_NAME, PHARMACY_ENCRYPTION_KEY, LOW_STOCK_THRESHOLD
+
+---
+
 ## [0.4.0] — 2026-05-10
 
 ### Session 4 — ctc-service complet + module Angular CTC

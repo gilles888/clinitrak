@@ -59,7 +59,7 @@ clinitrak/
 ├── study-service/             # Gestion des études cliniques (port 8082)
 ├── ethics-service/            # Comité d'Éthique (port 8083)
 ├── ctc-service/               # Centre de Thérapie Cellulaire (port 8084)
-├── pharmacy-service/          # Pharmacie (port 8085)
+├── pharmacy-service/          # Pharmacie (port 8085) ← COMPLET
 ├── exchange-service/          # Échanges inter-services (port 8086)
 ├── billing-service/           # Facturation (port 8087)
 ├── document-service/          # GED MinIO (port 8088)
@@ -137,6 +137,7 @@ Services Docker Compose :
   clinitrak-study   : Study Service (port 8082) ✅ Complet
   clinitrak-ethics   : Ethics Service (port 8083) ✅ Complet
   clinitrak-ctc      : CTC Service (port 8084) ✅ Complet
+  clinitrak-pharmacy : Pharmacy Service (port 8085) ✅ Complet
   clinitrak-gateway : API Gateway (port 8080)
 ```
 
@@ -161,6 +162,7 @@ Services Docker Compose :
 - [x] **study-service** complet (CRUD, recherche multicritères, 19 endpoints, tests)
 - [x] **ethics-service** complet (Feign, séquence CE, templates Thymeleaf, PDF, 16 endpoints)
 - [x] **ctc-service** complet (Feign, 6 entités, 17 enums, dashboard, timeline, 15 endpoints)
+- [x] **pharmacy-service** complet (AES-256, Apache POI, Flying Saucer, alertes @Scheduled, levée d'aveugle, 12 endpoints)
 - [x] **Angular 20** structure complète :
   - Auth store (signals), guards, intercepteurs
   - Layout (sidebar collapsible + topbar)
@@ -174,15 +176,14 @@ Services Docker Compose :
 
 1. **Priorité HAUTE** :
    - Gateway : routes + rate limiting + JWT validation
-   - Frontend : modules pharmacy
+   - `notification-service` (email/SMS via Spring Mail)
 
 2. **Priorité MOYENNE** :
-   - `pharmacy-service`, `billing-service`
-   - Frontend : modules pharmacy, billing
+   - `billing-service`
+   - Frontend : modules billing, documents
 
 3. **Priorité BASSE** :
-   - `pharmacy-service`, `billing-service`, `document-service`
-   - `notification-service` (email via Spring Mail)
+   - `document-service` (GED MinIO)
    - CI/CD (GitHub Actions ou GitLab CI)
 
 ---

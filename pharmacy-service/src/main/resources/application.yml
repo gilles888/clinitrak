@@ -1,0 +1,42 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: pharmacy-service
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${PHARMACY_DB_NAME:clinitrak_pharmacy}
+    username: ${DB_USERNAME:clinitrak}
+    password: ${DB_PASSWORD:clinitrak}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+
+clinitrak:
+  security:
+    jwt:
+      secret: ${JWT_SECRET:changeme-clinitrak-secret-key-must-be-at-least-256-bits-long}
+  pharmacy:
+    encryption-key: ${PHARMACY_ENCRYPTION_KEY:0123456789abcdef0123456789abcdef}
+    low-stock-threshold: ${LOW_STOCK_THRESHOLD:10}
+  services:
+    study-service:
+      url: ${STUDY_SERVICE_URL:http://localhost:8082}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
