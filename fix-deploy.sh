@@ -164,12 +164,16 @@ UNIT
 }
 
 # Vars DB communes — passées à chaque service pour matcher les application.yml
-# (DB_HOST/DB_PORT overrident les défauts :localhost/:5432 dans les YML)
+# Pool réduit : 11 services × 5 = 55 connexions (max_connections PostgreSQL = 200)
 COMMON_DB="-DDB_HOST=localhost \
   -DDB_PORT=5433 \
   -DDB_USER=clinitrak \
   -DDB_USERNAME=clinitrak \
-  -DDB_PASSWORD=${DB_PASSWORD}"
+  -DDB_PASSWORD=${DB_PASSWORD} \
+  -Dspring.datasource.hikari.maximum-pool-size=5 \
+  -Dspring.datasource.hikari.minimum-idle=1 \
+  -Dspring.datasource.hikari.connection-timeout=20000 \
+  -Dspring.datasource.hikari.idle-timeout=300000"
 
 # gateway — pas de DB, rate limiting Redis
 write_service "gateway" "8080" "" \
