@@ -734,6 +734,142 @@ pharmacy_drugs (1) ──── (*) pharmacy_emergency_unblinding (via patientCo
 
 ---
 
+## Base de données exchange-service (clinitrak_exchange)
+
+**SGBD** : PostgreSQL 16
+**Nom** : `clinitrak_exchange`
+**Port service** : 8086
+**Migrations** : Liquibase (`exchange-service/src/main/resources/db/changelog/`)
+
+### Table `exchange_external_users` (10 colonnes)
+
+| Colonne | Type | Contraintes | Description |
+|---------|------|-------------|-------------|
+| id | UUID | PK, DEFAULT gen_random_uuid() | Identifiant unique |
+| email | VARCHAR(255) | NOT NULL, UNIQUE | Email de l'utilisateur externe |
+| password_hash | VARCHAR(255) | NOT NULL | BCrypt-12 |
+| first_name | VARCHAR(100) | NOT NULL | |
+| last_name | VARCHAR(100) | NOT NULL | |
+| organization | VARCHAR(255) | | Organisation externe |
+| role | VARCHAR(30) | NOT NULL | COMPANY / INVESTIGATOR / CE_REQUESTOR |
+| verified_email | BOOLEAN | NOT NULL, DEFAULT FALSE | Vérification email requise avant login |
+| email_verification_token | VARCHAR(512) | NULLABLE | Token généré à l'inscription, NULLé après vérification |
+| created_at / updated_at | TIMESTAMPTZ | NOT NULL | Auto (trigger) |
+
+**Index** : `email`, `email_verification_token`
+
+### Table `exchange_requests` (13 colonnes)
+
+| Colonne | Type | Contraintes | Description |
+|---------|------|-------------|-------------|
+| id | UUID | PK, DEFAULT gen_random_uuid() | Identifiant unique |
+| tenant_id | UUID | NOT NULL, INDEX | Isolation multi-tenant (côté interne) |
+| external_user_id | UUID | FK exchange_external_users(id), NOT NULL | Propriétaire de la demande |
+| target_module | VARCHAR(10) | NOT NULL | CE / CTC |
+| request_type | VARCHAR(30) | NOT NULL | NEW_STUDY / AMENDMENT / EXTENSION / INFORMATION |
+| title | VARCHAR(255) | NOT NULL | Titre de la demande |
+| description | TEXT | | Description détaillée |
+| status | VARCHAR(20) | NOT NULL, DEFAULT 'DRAFT' | DRAFT / SUBMITTED / UNDER_REVIEW / ACCEPTED / REJECTED / MORE_INFO |
+| study_id | UUID | NULLABLE | Lien vers study-service après acceptation (pas de FK cross-service) |
+| submitted_at | TIMESTAMPTZ | NULLABLE | Horodatage de la soumission |
+| deleted | BOOLEAN | NOT NULL, DEFAULT FALSE | Suppression logique |
+| version | BIGINT | NOT NULL | Optimistic locking |
+| created_at / updated_at | TIMESTAMPTZ | NOT NULL | Auto (trigger) |
+
+**Index** : `tenant_id`, `external_user_id`, `status`, `submitted_at DESC`
+
+### Table `exchange_documents` (9 colonnes)
+
+| Colonne | Type | Contraintes | Description |
+|---------|------|-------------|-------------|
+| id | UUID | PK, DEFAULT gen_random_uuid() | Identifiant unique |
+| request_id | UUID | FK exchange_requests(id), NOT NULL | Demande associée |
+| file_name | VARCHAR(255) | NOT NULL | Nom du fichier |
+| file_path | VARCHAR(1000) | NOT NULL | Chemin de stockage (MinIO ou filesystem) |
+| file_size | BIGINT | | Taille en octets |
+| content_type | VARCHAR(100) | | MIME type |
+| uploaded_by | VARCHAR(255) | | Email ou identifiant de l'uploadeur |
+| deleted | BOOLEAN | NOT NULL, DEFAULT FALSE | Suppression logique |
+| created_at | TIMESTAMPTZ | NOT NULL | Auto |
+
+**Index** : `request_id`
+
+### Table `exchange_messages` (10 colonnes)
+
+| Colonne | Type | Contraintes | Description |
+|---------|------|-------------|-------------|
+| id | UUID | PK, DEFAULT gen_random_uuid() | Identifiant unique |
+| request_id | UUID | FK exchange_requests(id), NOT NULL | Demande associée |
+| sender_type | VARCHAR(10) | NOT NULL | INTERNAL / EXTERNAL |
+| sender_id | VARCHAR(255) | NOT NULL | UUID ou email de l'expéditeur |
+| sender_name | VARCHAR(255) | | Nom affiché de l'expéditeur |
+| content | TEXT | NOT NULL | Corps du message |
+| attachment_path | VARCHAR(1000) | NULLABLE | Pièce jointe optionnelle |
+| read_at | TIMESTAMPTZ | NULLABLE | NULL = non lu |
+| deleted | BOOLEAN | NOT NULL, DEFAULT FALSE | Suppression logique |
+| created_at | TIMESTAMPTZ | NOT NULL | Auto |
+
+**Index** : `request_id`, `sender_type`, `read_at WHERE read_at IS NULL`
+
+---
+
+## Base de données admin-service (clinitrak_admin)
+
+**SGBD** : PostgreSQL 16
+**Nom** : `clinitrak_admin`
+**Port service** : 8091
+**Migrations** : Liquibase (`admin-service/src/main/resources/db/changelog/`)
+
+### Table `admin_tenants` (11 colonnes)
+
+| Colonne | Type | Contraintes | Description |
+|---------|------|-------------|-------------|
+| id | UUID | PK, DEFAULT gen_random_uuid() | Identifiant unique |
+| name | VARCHAR(255) | NOT NULL | Nom complet du tenant |
+| slug | VARCHAR(63) | NOT NULL, UNIQUE | Identifiant URL (ex: saintluc) |
+| domain | VARCHAR(255) | NULLABLE | Domaine personnalisé |
+| status | VARCHAR(20) | NOT NULL, DEFAULT 'ACTIVE' | ACTIVE / INACTIVE / SUSPENDED |
+| subscription_type | VARCHAR(20) | NOT NULL | BASIC / PROFESSIONAL / ENTERPRISE |
+| configuration | JSONB | | Paramètres flexibles (timezone, ceNumberFormat, defaultLanguage, maxUsers, storageQuotaGb) |
+| max_users | INT | | Nombre maximum d'utilisateurs autorisés |
+| storage_quota_gb | INT | | Quota de stockage en Go |
+| deleted | BOOLEAN | NOT NULL, DEFAULT FALSE | Suppression logique |
+| created_at / updated_at | TIMESTAMPTZ | NOT NULL | Auto (trigger) |
+
+**Contrainte unique** : `slug`
+**Index** : `slug`, `status`, `subscription_type`
+
+### Table `admin_tenant_active_modules` (2 colonnes)
+
+| Colonne | Type | Contraintes | Description |
+|---------|------|-------------|-------------|
+| tenant_id | UUID | FK admin_tenants(id), NOT NULL | Tenant concerné |
+| module_type | VARCHAR(30) | NOT NULL | STUDIES / ETHICS / CTC / PHARMACY / EXCHANGE / BILLING / DOCUMENTS |
+
+**Clé primaire composée** : `(tenant_id, module_type)`
+**Index** : `tenant_id`
+
+### Table `admin_audit_logs` (11 colonnes)
+
+| Colonne | Type | Contraintes | Description |
+|---------|------|-------------|-------------|
+| id | UUID | PK, DEFAULT gen_random_uuid() | Identifiant unique |
+| tenant_id | UUID | NOT NULL, INDEX | Tenant concerné (référence souple) |
+| user_id | UUID | NULLABLE | Utilisateur concerné (référence souple) |
+| user_email | VARCHAR(255) | | Email dénormalisé |
+| action | VARCHAR(100) | NOT NULL | Action effectuée (ex: TENANT_CREATED, USER_INVITED) |
+| resource_type | VARCHAR(100) | | Type de ressource (ex: Tenant, User) |
+| resource_id | VARCHAR(255) | | Identifiant de la ressource |
+| details | JSONB | | Détails supplémentaires |
+| ip_address | VARCHAR(45) | | IPv4 ou IPv6 |
+| performed_by | VARCHAR(255) | | Email du super-admin ayant effectué l'action |
+| created_at | TIMESTAMPTZ | NOT NULL | Auto — insert-only, pas de soft-delete |
+
+**Index** : `tenant_id`, `user_id`, `action`, `tenant_id + created_at DESC` (index composite pour export)
+**Règle** : insert-only — aucune UPDATE ni DELETE autorisée sur cette table
+
+---
+
 ## Convention pour les nouveaux services
 
 Chaque nouveau service doit avoir sa propre base de données :

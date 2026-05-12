@@ -27,6 +27,13 @@ export const routes: Routes = [
     loadChildren: () => import('./features/auth/auth.routes').then(m => m.AUTH_ROUTES),
   },
 
+  // Portail Exchange externe (public — pas d'authGuard interne)
+  {
+    path: 'exchange',
+    loadChildren: () => import('./features/exchange/exchange.routes').then(m => m.EXCHANGE_ROUTES),
+    title: 'CliniTrak Exchange',
+  },
+
   // Layout principal (protégé)
   {
     path: '',
@@ -91,6 +98,13 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./features/documents/documents.routes').then(m => m.DOCUMENTS_ROUTES),
         title: 'CliniTrak — Documents',
+      },
+
+      {
+        path: 'notifications',
+        loadComponent: () =>
+          import('./features/notifications/notifications.component').then(m => m.NotificationsComponent),
+        title: 'CliniTrak — Notifications',
       },
 
       {

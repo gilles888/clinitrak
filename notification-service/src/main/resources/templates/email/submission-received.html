@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Soumission reçue — CliniTrak Exchange</title>
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; margin: 0; padding: 0; background: #f5f5f5; }
+        .wrapper { max-width: 600px; margin: 20px auto; background: #fff; border-radius: 8px; overflow: hidden; }
+        .header { background: #1a5276; color: #fff; padding: 24px 32px; }
+        .header h1 { margin: 0; font-size: 20px; }
+        .body { padding: 32px; }
+        .body h2 { color: #1a5276; }
+        .info-box { background: #d1ecf1; border-left: 4px solid #17a2b8; padding: 12px 16px; margin: 16px 0; border-radius: 0 4px 4px 0; }
+        .footer { background: #f8f9fa; border-top: 1px solid #e9ecef; padding: 16px 32px; text-align: center; font-size: 11px; color: #999; }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="header">
+            <h1>CliniTrak Exchange — Soumission confirmée</h1>
+        </div>
+        <div class="body">
+            <h2>Votre soumission a bien été reçue</h2>
+            <p>Bonjour <span th:text="${recipientName ?: 'Promoteur'}">Promoteur</span>,</p>
+            <p>Nous confirmons la réception de votre soumission sur la plateforme CliniTrak Exchange.</p>
+
+            <div class="info-box">
+                <strong>Référence de soumission :</strong>
+                <span th:text="${submissionReference ?: 'N/A'}">SUB-2026-001</span><br/>
+                <strong>Date de réception :</strong>
+                <span th:text="${submissionDate ?: 'Date N/A'}">2026-05-11</span><br/>
+                <strong>Type de demande :</strong>
+                <span th:text="${requestType ?: 'N/A'}">Demande d'accès</span>
+            </div>
+
+            <p>Notre équipe examinera votre dossier et vous contactera dans les meilleurs délais.
+               Le délai de traitement habituel est de <strong>15 jours ouvrables</strong>.</p>
+
+            <p>Vous pouvez suivre l'état de votre demande en vous connectant à votre espace Exchange.</p>
+        </div>
+        <div class="footer">
+            <p>Ce message est généré automatiquement par CliniTrak Exchange. Ne pas répondre.</p>
+            <p>&copy; 2026 CliniTrak — Confidentiel</p>
+        </div>
+    </div>
+</body>
+</html>

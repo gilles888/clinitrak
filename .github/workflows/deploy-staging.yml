@@ -1,0 +1,48 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches: [develop]
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      # Étape 1 : Construction de tous les services
+      - name: Build Docker images
+        run: echo "Build des images Docker pour l'environnement staging"
+
+      # Étape 2 : Connexion au registre
+      - name: Login to container registry
+        run: echo "Connexion à ghcr.io avec GITHUB_TOKEN"
+
+      # Étape 3 : Push des images taguées staging
+      - name: Push images with staging tag
+        run: echo "Push des images avec le tag staging-${{ github.sha }}"
+
+      # Étape 4 : Déploiement sur le serveur staging (SSH / kubectl / Ansible selon infra)
+      - name: Deploy to staging server
+        run: echo "Déploiement sur le serveur staging (à configurer selon l'infrastructure cible)"
+
+      # Étape 5 : Vérification des health checks après déploiement
+      - name: Verify health checks
+        run: |
+          echo "Vérification des health checks des services déployés"
+          echo "  - Gateway     : http://staging.clinitrak.be:8080/actuator/health"
+          echo "  - Auth        : http://staging.clinitrak.be:8081/api/v1/auth/health"
+          echo "  - Study       : http://staging.clinitrak.be:8082/actuator/health"
+          echo "  - Pharmacy    : http://staging.clinitrak.be:8085/actuator/health"
+          echo "  - Exchange    : http://staging.clinitrak.be:8086/actuator/health"
+          echo "  - Document    : http://staging.clinitrak.be:8088/actuator/health"
+          echo "  - Batch       : http://staging.clinitrak.be:8089/actuator/health"
+          echo "  - Notification: http://staging.clinitrak.be:8090/actuator/health"
+          echo "  - Admin       : http://staging.clinitrak.be:8091/actuator/health"
+
+      # Étape 6 : Notification de fin de déploiement
+      - name: Notify deployment result
+        if: always()
+        run: echo "Notification du résultat du déploiement staging (Slack / email à configurer)"

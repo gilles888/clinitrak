@@ -11,6 +11,213 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ---
 
+## [0.8.1] — 2026-05-12
+
+### Session 7 (suite) — Corrections d'intégration frontend/backend
+
+**Agents impliqués** : orchestrateur (corrections directes)
+
+#### Corrigé — notification-service
+
+- `NotificationController` : ajout endpoints manquants `GET /unread-count` et `PATCH /read-all`
+- `NotificationService` : ajout méthodes `countUnread(UUID)` et `markAllAsRead(UUID)`
+
+#### Corrigé — document-service
+
+- `DocumentController` : ajout de l'alias `/api/v1/documents/{id}/download-url` (en plus de `/download`) pour aligner avec le service Angular
+
+#### Corrigé — Frontend Angular
+
+- `notification.service.ts` : connexion SSE via `?userId=UUID` (au lieu de `?token=JWT`) — alignement avec le backend ; import `currentUser` depuis auth.store
+- `tenant.interceptor.ts` : priorité 1 sur `localStorage[ct_tenant_override]` pour le TenantSwitcher SUPER_ADMIN du topbar
+
+#### Documentation
+
+- `docs/DEPLOYMENT.md` : section "Serveur cible" ajoutée (vmi2936009, IP, DNS, nginx config, build frontend, pièges CareTrack)
+
+---
+
+## [0.8.0] — 2026-05-11
+
+### Session 8 — document-service, notification-service, batch-service, gateway complets
+
+**Agents impliqués** : backend
+
+#### Ajouté — document-service (port 8088)
+
+- `DocumentServiceApplication.java` : point d'entrée
+- `domain/entity/Document.java` : entité JPA avec versioning (parentDocumentId, version counter)
+- `domain/enums/DocumentType.java` : PDF, XLSX, DOCX, RTF, IMAGE
+- `domain/enums/ModuleSource.java` : STUDY, ETHICS, CTC, PHARMACY, EXCHANGE
+- `domain/repository/DocumentRepository.java` : requêtes JPQL multi-critères et historique de versions
+- `dto/DocumentUploadRequest.java`, `DocumentResponse.java`, `PdfGenerationRequest.java` : records Java
+- `service/DocumentStorageService.java` : upload/download/delete MinIO avec URLs présignées 15min
+- `service/DocumentService.java` : upload avec versioning automatique, soft-delete, génération PDF via Thymeleaf + Flying Saucer
+- `mapper/DocumentMapper.java` : MapStruct Document → DocumentResponse
+- `controller/DocumentController.java` : 6 endpoints (upload multipart, download, list, delete, generate-pdf, versions)
+- `config/MinioConfig.java` : initialisation bucket automatique au démarrage
+- `config/SecurityConfig.java`, `JpaConfig.java`, `OpenApiConfig.java`
+- `exception/GlobalExceptionHandler.java`, `DocumentNotFoundException.java`, `StorageException.java`
+- `resources/application.yml` : port 8088, multipart 50MB, MinIO, Thymeleaf
+- `resources/db/changelog/V1__init_document.sql` : table documents + 5 index
+- `resources/templates/pdf/default.html` : template PDF de base
+- `pom.xml` mis à jour : MinIO 8.5.11, Flying Saucer, Thymeleaf, JWT
+- Test d'intégration TestContainers : persistance, soft-delete, recherche multi-critères
+
+#### Ajouté — notification-service (port 8090)
+
+- `NotificationServiceApplication.java` : point d'entrée
+- `domain/entity/Notification.java` : entité JPA avec read/emailSent tracking
+- `domain/enums/NotificationType.java` : 8 types de notifications
+- `domain/repository/NotificationRepository.java` : recherche par userId, comptage non-lus
+- `dto/SendNotificationRequest.java`, `NotificationResponse.java`, `SseEvent.java` : records Java
+- `service/EmailService.java` : Spring Mail + Thymeleaf, `@Retryable` 3 tentatives (2s backoff), `@Recover` fallback
+- `service/NotificationService.java` : envoi email async, persistance, push SSE
+- `sse/SseEmitterRegistry.java` : registre ConcurrentHashMap par userId, cleanup @Scheduled 5min, heartbeat à la connexion
+- `controller/NotificationController.java` : 4 endpoints (send, my, read, stream SSE)
+- `config/RetryConfig.java` : `@EnableRetry`, `@EnableAsync`, `@EnableScheduling`
+- `resources/application.yml` : port 8090, SMTP MailHog dev
+- `resources/db/changelog/V1__init_notification.sql` : table notifications + 5 index
+- Templates email Thymeleaf : email-base.html, study-status-change.html, submission-received.html, stock-alert.html, annual-report-due.html
+- `pom.xml` mis à jour : Spring Mail, Spring Retry, spring-aspects
+- Test d'intégration TestContainers : persistance, recherche par userId, comptage non-lus
+
+#### Ajouté — batch-service (port 8089)
+
+- `BatchServiceApplication.java` : point d'entrée
+- `job/NightlyReminderJob.java` : job rappels nocturnes (2h00) via NotificationClient
+- `job/WeeklyReportJob.java` : job rapport hebdomadaire (lundi 6h00) via PharmacyClient + NotificationClient
+- `job/MonthlyBillingJob.java` : job facturation mensuelle (1er du mois 3h00)
+- `scheduler/BatchScheduler.java` : `@Scheduled` pour les 3 jobs, `launchJob()` réutilisable
+- `feign/NotificationClient.java` : POST `/api/v1/notifications/send`
+- `feign/PharmacyClient.java` : GET `/api/v1/pharmacy/medications/alerts`
+- `controller/BatchController.java` : trigger manuel, historique JobExplorer, statut par job
+- `config/BatchConfig.java` : `@EnableBatchProcessing`, `@EnableScheduling`
+- `config/FeignConfig.java` : `@EnableFeignClients`, logger BASIC, ErrorDecoder
+- `resources/application.yml` : port 8089, `spring.batch.jdbc.initialize-schema: always`, job auto-démarrage désactivé
+- `pom.xml` mis à jour : Spring Batch, spring-batch-test, OpenFeign
+- Test d'intégration TestContainers : vérification configuration des 3 jobs
+
+#### Ajouté — gateway (port 8080)
+
+- `GatewayApplication.java` : point d'entrée
+- `filter/GlobalJwtFilter.java` : GlobalFilter ordre -100, paths publics allowlist, validation JWT jjwt 0.12.x, propagation claims (X-User-Email, X-User-Id, X-User-Roles, X-Tenant-ID), 401 RFC 7807
+- `filter/GatewayLoggingFilter.java` : GlobalFilter ordre -99, log méthode + path + tenant + user + durée ms
+- `config/RateLimiterConfig.java` : KeyResolver par userId (authentifié) ou IP (anonyme)
+- `resources/application.yml` : 10 routes complètes, CORS global, Redis rate limiter, httpclient timeouts
+- `pom.xml` mis à jour : JWT jjwt 0.12.x
+- `Dockerfile` : multi-stage Maven + JRE Alpine
+- `docker-compose.yml` : gateway enrichi avec JWT_SECRET + 10 variables *_SERVICE_HOST
+
+---
+
+## [0.7.0] — 2026-05-11
+
+### Session 7 — Infrastructure complète + CI/CD + documentation
+
+**Agents impliqués** : devops
+
+#### Ajouté — Dockerfiles (3 nouveaux services)
+
+- `document-service/Dockerfile` : multi-stage Maven + JRE Alpine (port 8088)
+- `notification-service/Dockerfile` : multi-stage Maven + JRE Alpine (port 8090)
+- `batch-service/Dockerfile` : multi-stage Maven + JRE Alpine (port 8089)
+
+#### Ajouté — docker-compose.yml (3 nouveaux services)
+
+- `clinitrak-document` (port 8088) : variables MINIO_ENDPOINT, MINIO_ACCESS_KEY/SECRET_KEY, depends_on postgres + minio
+- `clinitrak-notification` (port 8090) : variables MAIL_HOST/PORT, depends_on postgres + mailhog
+- `clinitrak-batch` (port 8089) : variables NOTIFICATION_SERVICE_URL, PHARMACY_SERVICE_URL, depends_on postgres + clinitrak-notification
+
+#### Vérifié (aucune modification requise)
+
+- `scripts/init-db.sql` : bases `clinitrak_document`, `clinitrak_notification`, `clinitrak_batch` déjà créées avec GRANT depuis session 2
+
+#### Ajouté — CI/CD GitHub Actions
+
+- `.github/workflows/build-and-test.yml` : build Maven + tests JUnit (ubuntu-latest, Java 21 Temurin) + build Angular prod + tests ChromeHeadless
+- `.github/workflows/docker-build.yml` : build et push GHCR pour 11 services (strategy matrix), déclenché sur push main et tags v*
+- `.github/workflows/deploy-staging.yml` : pipeline de déploiement staging (commenté, prêt à connecter à l'infrastructure réelle), déclenché sur push develop
+
+#### Ajouté — Documentation
+
+- `docs/DEPLOYMENT.md` : guide production complet (prérequis, variables obligatoires, ordre de démarrage, health checks, migrations Liquibase, troubleshooting)
+- `docs/TENANT-SETUP.md` : guide onboarding hôpital (création tenant, modules, invitation admin, SMTP, checklist, résolution problèmes)
+- `docs/ADR/ADR-001-multi-tenant.md` : décision RLS applicatif vs schémas séparés vs bases séparées
+- `docs/ADR/ADR-002-jwt-exchange.md` : décision JWT distinct pour utilisateurs externes (isolation sécurité)
+- `docs/ADR/ADR-003-minio-storage.md` : décision MinIO vs filesystem local vs PostgreSQL bytea
+
+#### Modifié
+
+- `.env.example` : ajout variables DOCUMENT_DB_NAME, NOTIFICATION_DB_NAME, BATCH_DB_NAME, NOTIFICATION_SERVICE_URL, PHARMACY_SERVICE_URL (MINIO_ACCESS/SECRET_KEY déjà présentes)
+
+---
+
+## [0.6.1] — 2026-05-11
+
+### Session 6b — Consolidation DevOps + documentation API complète
+
+**Agents impliqués** : devops
+
+#### Vérifié (aucune modification requise)
+
+- `exchange-service/Dockerfile` : conforme au standard (port 8086, multi-stage, user non-root)
+- `admin-service/Dockerfile` : conforme au standard (port 8091, multi-stage, user non-root)
+- `docker-compose.yml` : services `clinitrak-exchange` et `clinitrak-admin` déjà présents et corrects
+- `scripts/init-db.sql` : bases `clinitrak_exchange` et `clinitrak_admin` déjà créées avec GRANT
+- `.env.example` : variables `EXCHANGE_JWT_SECRET` et `ADMIN_DB_NAME` déjà présentes
+
+#### Mis à jour
+
+- `docs/api/exchange-service.md` : réécriture complète au format standard (endpoints détaillés,
+  request/response JSON, codes d'erreur, architecture double-JWT, tableau des variables d'env)
+- `docs/api/admin-service.md` : réécriture complète au format standard (endpoints détaillés,
+  tableau query params audit-logs, export Excel, health check, notes d'architecture)
+
+---
+
+## [0.6.0] — 2026-05-11
+
+### Session 6 — exchange-service + admin-service complets
+
+**Agents impliqués** : backend, frontend, devops (parallèle)
+
+#### Ajouté — exchange-service (backend, port 8086)
+
+- `exchange-service/pom.xml` : Spring Mail, jjwt, MapStruct
+- **Enums** (5) : ExternalUserRole, TargetModule, ExchangeRequestType, ExchangeStatus, SenderType
+- **Entités JPA** (4) : ExternalUser (BCrypt + email verification), ExchangeRequest, ExchangeDocument, ExchangeMessage
+- **Services** (3) : ExternalUserService (register+login+verify), ExchangeRequestService (CRUD+submit+link), ExchangeMessageService
+- **JWT externe** : ExchangeJwtService avec clé EXCHANGE_JWT_SECRET distincte + ExchangeJwtFilter
+- **Controllers** (2) : ExchangeAuthController (public), ExchangeRequestController (externe+interne)
+- **Liquibase** : V1__init_exchange.sql (4 tables, 4 index, 4 triggers)
+
+#### Ajouté — admin-service (backend, port 8091)
+
+- `admin-service/pom.xml` : Apache POI 5.2.5, jjwt, MapStruct
+- **Enums** (3) : TenantStatus, SubscriptionType, ModuleType
+- **Entités JPA** (2) : AdminTenant (JSONB config, Set<ModuleType>), SystemAuditLog (insert-only)
+- **Services** (4) : TenantService, UserInviteService, AuditLogService (export Excel POI), SystemHealthService
+- **Controllers** (4) : TenantController, UserAdminController, AuditLogController (export xlsx), SystemController
+- **Liquibase** : V1__init_admin.sql (3 tables, 5 index)
+
+#### Ajouté — clinitrak-frontend (Angular)
+
+- `core/models/exchange.model.ts` + `core/models/admin.model.ts`
+- `core/services/exchange.service.ts` + `core/services/admin.service.ts`
+- Module exchange (6 composants) : LandingPage (layout public), ExternalRegistration, ExchangeLogin, RequestWizard (p-steps 6 étapes), RequestTracking (p-timeline), Messaging
+- Module admin (5 composants) : SystemDashboard (p-knob, p-progressBar), TenantList, TenantConfig, UserManagement (p-pickList), AuditLogViewer (export Excel)
+
+#### Ajouté — DevOps
+
+- `exchange-service/Dockerfile` (port 8086), `admin-service/Dockerfile` (port 8091)
+- `docker-compose.yml` : services `clinitrak-exchange` et `clinitrak-admin`
+- `docs/api/exchange-service.md`, `docs/api/admin-service.md`
+- `docs/database/schema.md` : tables exchange + admin
+- `.env.example` : EXCHANGE_DB_NAME, EXCHANGE_JWT_SECRET, ADMIN_DB_NAME
+
+---
+
 ## [0.5.0] — 2026-05-11
 
 ### Session 5 — pharmacy-service complet + module Angular Pharmacie

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Changement de statut — Étude clinique</title>
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; margin: 0; padding: 0; background: #f5f5f5; }
+        .wrapper { max-width: 600px; margin: 20px auto; background: #fff; border-radius: 8px; overflow: hidden; }
+        .header { background: #1a5276; color: #fff; padding: 24px 32px; }
+        .header h1 { margin: 0; font-size: 20px; }
+        .body { padding: 32px; }
+        .body h2 { color: #1a5276; }
+        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-weight: bold; font-size: 13px; }
+        .status-approved { background: #d4edda; color: #155724; }
+        .status-rejected { background: #f8d7da; color: #721c24; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .footer { background: #f8f9fa; border-top: 1px solid #e9ecef; padding: 16px 32px; text-align: center; font-size: 11px; color: #999; }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="header">
+            <h1>CliniTrak — Changement de statut d'étude</h1>
+        </div>
+        <div class="body">
+            <h2>Mise à jour de votre étude clinique</h2>
+            <p>Bonjour <span th:text="${recipientName ?: 'Investigateur'}">Investigateur</span>,</p>
+            <p>Le statut de l'étude <strong th:text="${studyTitle ?: 'N/A'}">Titre de l'étude</strong>
+               (réf. <span th:text="${studyReference ?: 'N/A'}">REF-001</span>) vient d'être modifié.</p>
+
+            <p>
+                Nouveau statut :
+                <span class="status-badge"
+                      th:classappend="${newStatus == 'APPROVED'} ? 'status-approved' : (${newStatus == 'REJECTED'} ? 'status-rejected' : 'status-pending')"
+                      th:text="${newStatus ?: 'INCONNU'}">APPROUVÉ</span>
+            </p>
+
+            <p th:if="${comment}">
+                <strong>Commentaire :</strong><br/>
+                <span th:text="${comment}">Commentaire du responsable</span>
+            </p>
+
+            <p>Connectez-vous à la plateforme CliniTrak pour consulter le détail de cette mise à jour.</p>
+        </div>
+        <div class="footer">
+            <p>Ce message est généré automatiquement par CliniTrak. Ne pas répondre.</p>
+            <p>&copy; 2026 CliniTrak — Confidentiel</p>
+        </div>
+    </div>
+</body>
+</html>

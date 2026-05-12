@@ -60,12 +60,12 @@ clinitrak/
 ├── ethics-service/            # Comité d'Éthique (port 8083)
 ├── ctc-service/               # Centre de Thérapie Cellulaire (port 8084)
 ├── pharmacy-service/          # Pharmacie (port 8085) ← COMPLET
-├── exchange-service/          # Échanges inter-services (port 8086)
+├── exchange-service/          # Portail échanges externes (port 8086) ← COMPLET
 ├── billing-service/           # Facturation (port 8087)
 ├── document-service/          # GED MinIO (port 8088)
 ├── batch-service/             # Jobs Spring Batch (port 8089)
 ├── notification-service/      # Email/SMS (port 8090)
-└── admin-service/             # Administration (port 8091)
+└── admin-service/             # Administration (port 8091) ← COMPLET
 ```
 
 **Package Java** : `be.clinitrak.<module>` (ex: `be.clinitrak.auth`)
@@ -138,7 +138,12 @@ Services Docker Compose :
   clinitrak-ethics   : Ethics Service (port 8083) ✅ Complet
   clinitrak-ctc      : CTC Service (port 8084) ✅ Complet
   clinitrak-pharmacy : Pharmacy Service (port 8085) ✅ Complet
-  clinitrak-gateway : API Gateway (port 8080)
+  clinitrak-exchange : Exchange Portal (port 8086) ✅ Complet
+  clinitrak-document : Document Service (port 8088) ✅ Complet
+  clinitrak-notification : Notification Service (port 8090) ✅ Complet
+  clinitrak-batch    : Batch Service (port 8089) ✅ Complet
+  clinitrak-admin    : Admin Service (port 8091) ✅ Complet
+  clinitrak-gateway : API Gateway (port 8080) ✅ Complet
 ```
 
 ---
@@ -163,28 +168,42 @@ Services Docker Compose :
 - [x] **ethics-service** complet (Feign, séquence CE, templates Thymeleaf, PDF, 16 endpoints)
 - [x] **ctc-service** complet (Feign, 6 entités, 17 enums, dashboard, timeline, 15 endpoints)
 - [x] **pharmacy-service** complet (AES-256, Apache POI, Flying Saucer, alertes @Scheduled, levée d'aveugle, 12 endpoints)
+- [x] **exchange-service** complet (JWT externe distinct, register+verify email, CRUD demandes, messagerie, endpoints internes)
+- [x] **admin-service** complet (gestion tenants, invitation utilisateurs, audit logs, export Excel, health check)
 - [x] **Angular 20** structure complète :
   - Auth store (signals), guards, intercepteurs
   - Layout (sidebar collapsible + topbar)
   - Page login (PrimeNG 17 + Tailwind)
   - Dashboard skeleton
   - Toutes les routes lazy-loaded
-- [x] Docker Compose (postgres, redis, minio, auth, gateway)
-- [x] `.env.example`, `.gitignore`, `Dockerfile` multi-stage
+- [x] Docker Compose (postgres, redis, minio, mailhog, auth, study, ethics, ctc, pharmacy, exchange, document, notification, batch, admin, gateway)
+- [x] `.env.example`, `.gitignore`, `Dockerfile` multi-stage (un par service — tous les services)
+- [x] `scripts/init-db.sql` : toutes les bases créées (auth, study, ethics, ctc, pharmacy, exchange, billing, document, batch, notification, admin)
+- [x] `docs/api/` : documentation complète exchange-service et admin-service (format standard)
+- [x] **CI/CD GitHub Actions** :
+  - `.github/workflows/build-and-test.yml` : build + tests backend et frontend
+  - `.github/workflows/docker-build.yml` : build et push GHCR (11 services, matrix strategy)
+  - `.github/workflows/deploy-staging.yml` : pipeline staging (prêt à connecter à l'infra)
+- [x] **Documentation architecture** :
+  - `docs/DEPLOYMENT.md` : guide production complet
+  - `docs/TENANT-SETUP.md` : guide onboarding hôpital
+  - `docs/ADR/ADR-001-multi-tenant.md` : décision RLS applicatif
+  - `docs/ADR/ADR-002-jwt-exchange.md` : décision JWT distinct externe
+  - `docs/ADR/ADR-003-minio-storage.md` : décision MinIO vs filesystem
 
 ### À développer (par priorité)
 
 1. **Priorité HAUTE** :
-   - Gateway : routes + rate limiting + JWT validation
-   - `notification-service` (email/SMS via Spring Mail)
+   - `billing-service` : implémentation complète
+   - Frontend : modules documents, notifications (intégration SSE)
 
 2. **Priorité MOYENNE** :
-   - `billing-service`
-   - Frontend : modules billing, documents
+   - Frontend : module billing
+   - Connexion batch-service → study-service (vrais rappels rapport annuel)
+   - Tests E2E (Cypress ou Playwright)
 
 3. **Priorité BASSE** :
-   - `document-service` (GED MinIO)
-   - CI/CD (GitHub Actions ou GitLab CI)
+   - CI/CD : connecter deploy-staging.yml à une vraie infrastructure
 
 ---
 

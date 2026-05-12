@@ -1,0 +1,124 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: clinitrak-gateway
+
+  cloud:
+    gateway:
+      routes:
+        # Auth Service — rate limiting renforcé sur les endpoints d'authentification
+        - id: auth-service
+          uri: http://${AUTH_SERVICE_HOST:clinitrak-auth}:8081
+          predicates:
+            - Path=/api/v1/auth/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 20
+                redis-rate-limiter.burstCapacity: 40
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@ipKeyResolver}"
+
+        # Study Service
+        - id: study-service
+          uri: http://${STUDY_SERVICE_HOST:clinitrak-study}:8082
+          predicates:
+            - Path=/api/v1/studies/**
+
+        # Ethics Service
+        - id: ethics-service
+          uri: http://${ETHICS_SERVICE_HOST:clinitrak-ethics}:8083
+          predicates:
+            - Path=/api/v1/ethics/**
+
+        # CTC Service
+        - id: ctc-service
+          uri: http://${CTC_SERVICE_HOST:clinitrak-ctc}:8084
+          predicates:
+            - Path=/api/v1/ctc/**
+
+        # Pharmacy Service
+        - id: pharmacy-service
+          uri: http://${PHARMACY_SERVICE_HOST:clinitrak-pharmacy}:8085
+          predicates:
+            - Path=/api/v1/pharmacy/**
+
+        # Exchange Service
+        - id: exchange-service
+          uri: http://${EXCHANGE_SERVICE_HOST:clinitrak-exchange}:8086
+          predicates:
+            - Path=/api/v1/exchange/**
+
+        # Document Service
+        - id: document-service
+          uri: http://${DOCUMENT_SERVICE_HOST:clinitrak-document}:8088
+          predicates:
+            - Path=/api/v1/documents/**
+
+        # Notification Service
+        - id: notification-service
+          uri: http://${NOTIFICATION_SERVICE_HOST:clinitrak-notification}:8090
+          predicates:
+            - Path=/api/v1/notifications/**
+
+        # Batch Service
+        - id: batch-service
+          uri: http://${BATCH_SERVICE_HOST:clinitrak-batch}:8089
+          predicates:
+            - Path=/api/v1/batch/**
+
+        # Admin Service
+        - id: admin-service
+          uri: http://${ADMIN_SERVICE_HOST:clinitrak-admin}:8091
+          predicates:
+            - Path=/api/v1/admin/**
+
+      # Configuration CORS globale
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: ${CORS_ORIGINS:http://localhost:4200}
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - PATCH
+              - DELETE
+              - OPTIONS
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+            maxAge: 3600
+
+      # Activation du load balancer réactif
+      httpclient:
+        connect-timeout: 5000
+        response-timeout: 30s
+
+  # Redis pour le rate limiting
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000ms
+
+clinitrak:
+  jwt:
+    secret: ${JWT_SECRET:changeme-clinitrak-secret-key-must-be-at-least-256-bits-long}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,gateway
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    be.clinitrak.gateway: INFO
+    org.springframework.cloud.gateway: WARN
+    reactor.netty: WARN

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Alerte stock — Pharmacie CliniTrak</title>
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; margin: 0; padding: 0; background: #f5f5f5; }
+        .wrapper { max-width: 600px; margin: 20px auto; background: #fff; border-radius: 8px; overflow: hidden; }
+        .header { background: #c0392b; color: #fff; padding: 24px 32px; }
+        .header h1 { margin: 0; font-size: 20px; }
+        .body { padding: 32px; }
+        .body h2 { color: #c0392b; }
+        .alert-box { background: #f8d7da; border-left: 4px solid #c0392b; padding: 12px 16px; margin: 16px 0; border-radius: 0 4px 4px 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        th { background: #c0392b; color: #fff; padding: 8px 12px; text-align: left; }
+        td { padding: 8px 12px; border-bottom: 1px solid #e9ecef; }
+        tr:nth-child(even) td { background: #fff8f8; }
+        .footer { background: #f8f9fa; border-top: 1px solid #e9ecef; padding: 16px 32px; text-align: center; font-size: 11px; color: #999; }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="header">
+            <h1>Alerte stock — Pharmacie CliniTrak</h1>
+        </div>
+        <div class="body">
+            <h2>Seuil de stock critique atteint</h2>
+            <p>Bonjour <span th:text="${recipientName ?: 'Pharmacien'}">Pharmacien</span>,</p>
+
+            <div class="alert-box">
+                Le stock de <strong th:text="${medicationName ?: 'médicament inconnu'}">Médicament</strong>
+                est inférieur au seuil critique configuré.
+            </div>
+
+            <table>
+                <tr>
+                    <th>Information</th>
+                    <th>Valeur</th>
+                </tr>
+                <tr>
+                    <td>Médicament</td>
+                    <td th:text="${medicationName ?: 'N/A'}">Médicament</td>
+                </tr>
+                <tr>
+                    <td>Stock actuel</td>
+                    <td th:text="${currentStock ?: '0'} + ' unités'">0 unités</td>
+                </tr>
+                <tr>
+                    <td>Seuil d'alerte</td>
+                    <td th:text="${threshold ?: '10'} + ' unités'">10 unités</td>
+                </tr>
+                <tr>
+                    <td>Étude concernée</td>
+                    <td th:text="${studyTitle ?: 'N/A'}">N/A</td>
+                </tr>
+            </table>
+
+            <p style="margin-top: 16px;">Veuillez procéder à un réapprovisionnement ou contacter le fournisseur dans les plus brefs délais.</p>
+        </div>
+        <div class="footer">
+            <p>Ce message est généré automatiquement par CliniTrak Pharmacie. Ne pas répondre.</p>
+            <p>&copy; 2026 CliniTrak — Confidentiel</p>
+        </div>
+    </div>
+</body>
+</html>

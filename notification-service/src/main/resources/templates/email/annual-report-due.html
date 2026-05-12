@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Rapport annuel à soumettre — CliniTrak</title>
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; margin: 0; padding: 0; background: #f5f5f5; }
+        .wrapper { max-width: 600px; margin: 20px auto; background: #fff; border-radius: 8px; overflow: hidden; }
+        .header { background: #1a5276; color: #fff; padding: 24px 32px; }
+        .header h1 { margin: 0; font-size: 20px; }
+        .body { padding: 32px; }
+        .body h2 { color: #1a5276; }
+        .warning-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 16px; margin: 16px 0; border-radius: 0 4px 4px 0; }
+        .footer { background: #f8f9fa; border-top: 1px solid #e9ecef; padding: 16px 32px; text-align: center; font-size: 11px; color: #999; }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="header">
+            <h1>CliniTrak — Rappel de rapport annuel</h1>
+        </div>
+        <div class="body">
+            <h2>Rapport annuel à soumettre</h2>
+            <p>Bonjour <span th:text="${recipientName ?: 'Investigateur'}">Investigateur</span>,</p>
+            <p>Nous vous rappelons que le rapport annuel de l'étude suivante doit être soumis prochainement :</p>
+
+            <div class="warning-box">
+                <strong>Étude :</strong> <span th:text="${studyTitle ?: 'N/A'}">Titre de l'étude</span><br/>
+                <strong>Référence :</strong> <span th:text="${studyReference ?: 'N/A'}">REF-001</span><br/>
+                <strong>Date limite de soumission :</strong>
+                <span th:text="${deadline ?: 'À définir'}">31/12/2026</span><br/>
+                <strong>Jours restants :</strong>
+                <span th:text="${daysRemaining ?: 'N/A'}">30</span> jours
+            </div>
+
+            <p>La non-soumission dans les délais peut entraîner des conséquences réglementaires pour votre étude.
+               Veuillez vous connecter à CliniTrak pour initier la procédure de rapport annuel.</p>
+
+            <p>Pour toute question, contactez le secrétariat du Comité d'Éthique.</p>
+        </div>
+        <div class="footer">
+            <p>Ce message est généré automatiquement par CliniTrak. Ne pas répondre.</p>
+            <p>&copy; 2026 CliniTrak — Confidentiel</p>
+        </div>
+    </div>
+</body>
+</html>
