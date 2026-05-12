@@ -6,7 +6,7 @@ import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
-import { TextareaModule } from 'primeng/textarea';
+import { InputTextareaModule } from 'primeng/inputtextarea';
 import { PharmacyService } from '../../../core/services/pharmacy.service';
 import { EmergencyUnblinding } from '../../../core/models/pharmacy.model';
 
@@ -37,7 +37,7 @@ import { EmergencyUnblinding } from '../../../core/models/pharmacy.model';
     InputTextModule,
     TableModule,
     TagModule,
-    TextareaModule,
+    InputTextareaModule,
   ],
   template: `
     <div class="tw-space-y-6">

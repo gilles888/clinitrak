@@ -6,7 +6,7 @@ import { CalendarModule } from 'primeng/calendar';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
-import { TableModule } from 'primeng/table';
+import { TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
@@ -104,7 +104,7 @@ import {
         [loading]="isLoading()"
         [rowsPerPageOptions]="[10, 20, 50]"
         (onLazyLoad)="onLazyLoad($event)"
-        [defaultSortField]="'dueDate'"
+        [sortField]="'dueDate'"
         [defaultSortOrder]="1"
         styleClass="tw-border tw-border-gray-200 tw-rounded-lg"
         [rowHover]="true"
@@ -404,10 +404,11 @@ export class AnnualReportTrackerComponent implements OnInit {
    *
    * @param event événement PrimeNG LazyLoadEvent
    */
-  protected onLazyLoad(event: { first: number; rows: number }): void {
-    const page = Math.floor((event.first ?? 0) / (event.rows ?? this.pageSize()));
+  protected onLazyLoad(event: TableLazyLoadEvent): void {
+    const rows = event.rows ?? this.pageSize();
+    const page = Math.floor((event.first ?? 0) / rows);
     this.currentPage.set(page);
-    this.pageSize.set(event.rows ?? 20);
+    this.pageSize.set(rows);
     this.loadReports();
   }
 
@@ -437,7 +438,7 @@ export class AnnualReportTrackerComponent implements OnInit {
    * @param status clé du statut AnnualReportStatus
    * @returns severité PrimeNG
    */
-  protected getStatusSeverity(status: string): string {
+  protected getStatusSeverity(status: string): 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined {
     return ANNUAL_REPORT_STATUS_SEVERITY[status] ?? 'info';
   }
 

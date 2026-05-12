@@ -13,7 +13,7 @@ import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.context.annotation.Bean;
-import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import java.time.LocalDate;
@@ -28,7 +28,7 @@ import java.util.UUID;
  * et préparer les données de facturation pour le billing-service.
  */
 @Slf4j
-@Component
+@Configuration("monthlyBillingJobConfiguration")
 @RequiredArgsConstructor
 public class MonthlyBillingJob {
 

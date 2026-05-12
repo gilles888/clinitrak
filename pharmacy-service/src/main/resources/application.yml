@@ -27,7 +27,7 @@ clinitrak:
     low-stock-threshold: ${LOW_STOCK_THRESHOLD:10}
   services:
     study-service:
-      url: ${STUDY_SERVICE_URL:http://localhost:8082}
+      url: ${STUDY_SERVICE_URL:http://localhost:8092}
 
 management:
   endpoints:

@@ -380,7 +380,7 @@ export class MonitoringPlanComponent implements OnInit {
    * @param visit visite de monitoring
    * @returns sévérité PrimeNG
    */
-  protected getVisitStatusSeverity(visit: MonitoringVisit): string {
+  protected getVisitStatusSeverity(visit: MonitoringVisit): 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined {
     return VISIT_STATUS_SEVERITY[visit.status] ?? 'info';
   }
 

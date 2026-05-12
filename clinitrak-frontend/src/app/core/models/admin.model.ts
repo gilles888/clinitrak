@@ -74,15 +74,18 @@ export interface TenantStatistics {
   moduleUsage: Record<string, number>;
 }
 
+/** Type sévérité PrimeNG Tag. */
+export type PrimeNGSeverity = 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined;
+
 /** Severité PrimeNG par statut de tenant. */
-export const TENANT_STATUS_SEVERITY: Record<TenantStatus, string> = {
+export const TENANT_STATUS_SEVERITY: Record<TenantStatus, PrimeNGSeverity> = {
   [TenantStatus.ACTIVE]:    'success',
   [TenantStatus.INACTIVE]:  'secondary',
   [TenantStatus.SUSPENDED]: 'danger',
 };
 
 /** Severité PrimeNG par type d'abonnement. */
-export const SUBSCRIPTION_SEVERITY: Record<SubscriptionType, string> = {
+export const SUBSCRIPTION_SEVERITY: Record<SubscriptionType, PrimeNGSeverity> = {
   [SubscriptionType.BASIC]:        'secondary',
   [SubscriptionType.PROFESSIONAL]: 'info',
   [SubscriptionType.ENTERPRISE]:   'success',

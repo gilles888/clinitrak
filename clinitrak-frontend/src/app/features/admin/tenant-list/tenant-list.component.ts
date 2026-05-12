@@ -227,12 +227,12 @@ export class TenantListComponent implements OnInit {
   });
 
   /** Sévérité PrimeNG selon le statut du tenant. */
-  protected getStatusSeverity(status: TenantStatus): string {
+  protected getStatusSeverity(status: TenantStatus): 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined {
     return TENANT_STATUS_SEVERITY[status] ?? 'secondary';
   }
 
   /** Sévérité PrimeNG selon le type d'abonnement. */
-  protected getSubscriptionSeverity(sub: SubscriptionType): string {
+  protected getSubscriptionSeverity(sub: SubscriptionType): 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined {
     return SUBSCRIPTION_SEVERITY[sub] ?? 'secondary';
   }
 

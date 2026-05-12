@@ -26,7 +26,7 @@ clinitrak:
       secret: ${JWT_SECRET:changeme-clinitrak-secret-key-must-be-at-least-256-bits-long}
   services:
     study-service:
-      url: ${STUDY_SERVICE_URL:http://localhost:8082}
+      url: ${STUDY_SERVICE_URL:http://localhost:8092}
 
 management:
   endpoints:

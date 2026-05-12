@@ -24,7 +24,7 @@ spring:
     check-template-location: false
 
 server:
-  port: ${SERVER_PORT:8083}
+  port: ${SERVER_PORT:8093}
   error:
     include-message: always
     include-binding-errors: always
@@ -37,6 +37,9 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+  health:
+    mail:
+      enabled: false
 
 clinitrak:
   security:
@@ -49,7 +52,7 @@ clinitrak:
       - ${CORS_ORIGIN_1:http://localhost:4200}
   services:
     study-service:
-      url: ${STUDY_SERVICE_URL:http://localhost:8082}
+      url: ${STUDY_SERVICE_URL:http://localhost:8092}
 
 springdoc:
   api-docs:

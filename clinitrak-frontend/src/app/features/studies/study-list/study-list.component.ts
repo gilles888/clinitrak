@@ -8,7 +8,7 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { DropdownModule } from 'primeng/dropdown';
 import { InputTextModule } from 'primeng/inputtext';
 import { PanelModule } from 'primeng/panel';
-import { TableModule } from 'primeng/table';
+import { TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
@@ -463,14 +463,17 @@ export class StudyListComponent implements OnInit {
    *
    * @param event événement PrimeNG LazyLoadEvent
    */
-  protected onLazyLoad(event: { first: number; rows: number; sortField?: string; sortOrder?: 1 | -1 }): void {
-    const page = Math.floor((event.first ?? 0) / (event.rows ?? this.pageSize()));
+  protected onLazyLoad(event: TableLazyLoadEvent): void {
+    const first = event.first ?? 0;
+    const rows = event.rows ?? this.pageSize();
+    const page = Math.floor(first / rows);
     this.currentPage.set(page);
-    this.pageSize.set(event.rows ?? 20);
+    this.pageSize.set(rows);
 
     if (event.sortField) {
-      const direction = event.sortOrder === 1 ? 'asc' : 'desc';
-      this.currentSort.set(`${event.sortField},${direction}`);
+      const direction = (event.sortOrder ?? 1) > 0 ? 'asc' : 'desc';
+      const field = Array.isArray(event.sortField) ? event.sortField[0] : event.sortField;
+      this.currentSort.set(`${field},${direction}`);
     }
 
     this.loadStudies();

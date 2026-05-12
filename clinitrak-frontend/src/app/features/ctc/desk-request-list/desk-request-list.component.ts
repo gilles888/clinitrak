@@ -9,7 +9,7 @@ import { DialogModule } from 'primeng/dialog';
 import { DropdownModule } from 'primeng/dropdown';
 import { InputTextModule } from 'primeng/inputtext';
 import { TagModule } from 'primeng/tag';
-import { TextareaModule } from 'primeng/textarea';
+import { InputTextareaModule } from 'primeng/inputtextarea';
 import { CtcService } from '../../../core/services/ctc.service';
 import {
   DESK_TYPE_OPTIONS,
@@ -48,7 +48,7 @@ import {
     DropdownModule,
     InputTextModule,
     TagModule,
-    TextareaModule,
+    InputTextareaModule,
   ],
   template: `
     <div class="tw-space-y-6">
@@ -535,7 +535,7 @@ export class DeskRequestListComponent implements OnInit {
    * @param req demande guichet
    * @returns sévérité PrimeNG
    */
-  protected getStatusSeverity(req: TrialDeskRequest): string {
+  protected getStatusSeverity(req: TrialDeskRequest): 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined {
     return REQUEST_STATUS_SEVERITY[req.status] ?? 'info';
   }
 
@@ -545,7 +545,7 @@ export class DeskRequestListComponent implements OnInit {
    * @param req demande guichet
    * @returns sévérité PrimeNG
    */
-  protected getPrioritySeverity(req: TrialDeskRequest): string {
+  protected getPrioritySeverity(req: TrialDeskRequest): 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined {
     return PRIORITY_SEVERITY[req.priority] ?? 'info';
   }
 

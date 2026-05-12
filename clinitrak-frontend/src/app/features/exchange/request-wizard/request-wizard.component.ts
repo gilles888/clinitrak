@@ -515,13 +515,17 @@ export class RequestWizardComponent {
     this.isSubmitting.set(true);
     this.messages.set([]);
 
-    const payload = {
+    const rawPayload = {
       ...this.wizardData(),
       ...this.protocolForm.value,
       ...this.teamForm.value,
     };
+    // Supprimer les valeurs null pour satisfaire Partial<ExchangeRequest>
+    const payload = Object.fromEntries(
+      Object.entries(rawPayload).filter(([, v]) => v !== null)
+    );
 
-    this.exchangeService.createRequest(payload).subscribe({
+    this.exchangeService.createRequest(payload as Partial<import('../../../core/models/exchange.model').ExchangeRequest>).subscribe({
       next: (req) => {
         this.exchangeService.submitRequest(req.id).subscribe({
           next: () => {

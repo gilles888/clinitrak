@@ -99,7 +99,7 @@ import {
               <span class="tw-font-bold tw-text-amber-700">Péremptions dans 30 jours</span>
               <p-badge
                 [value]="alertsByType()[AlertType.EXPIRY_30].length.toString()"
-                severity="warn"
+                severity="warning"
               />
             </div>
           </ng-template>
@@ -126,7 +126,7 @@ import {
               <span class="tw-font-bold tw-text-orange-700">Stocks faibles</span>
               <p-badge
                 [value]="alertsByType()[AlertType.LOW_STOCK].length.toString()"
-                severity="warn"
+                severity="warning"
               />
             </div>
           </ng-template>

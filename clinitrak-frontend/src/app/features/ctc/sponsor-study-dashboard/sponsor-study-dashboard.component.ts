@@ -217,7 +217,7 @@ export class SponsorStudyDashboardComponent implements OnInit {
    * @param study étude promoteur
    * @returns sévérité PrimeNG
    */
-  protected getRegulatoryStatusSeverity(study: SponsorStudy): string {
+  protected getRegulatoryStatusSeverity(study: SponsorStudy): 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined {
     return REGULATORY_STATUS_SEVERITY[study.regulatoryStatus] ?? 'info';
   }
 }

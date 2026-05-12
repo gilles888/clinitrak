@@ -1,7 +1,7 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TableModule } from 'primeng/table';
+import { TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { DropdownModule } from 'primeng/dropdown';
@@ -176,7 +176,7 @@ interface SelectOption {
 
         <!-- Filtre par type -->
         <p-dropdown
-          [options]="[{ label: 'Tous les types', value: '' }, ...documentTypeOptions]"
+          [options]="allTypeOptions"
           [(ngModel)]="filterType"
           optionLabel="label"
           optionValue="value"
@@ -186,7 +186,7 @@ interface SelectOption {
 
         <!-- Filtre par module -->
         <p-dropdown
-          [options]="[{ label: 'Tous les modules', value: '' }, ...moduleOptions]"
+          [options]="allModuleOptions"
           [(ngModel)]="filterModule"
           optionLabel="label"
           optionValue="value"
@@ -376,6 +376,12 @@ export class DocumentListComponent implements OnInit {
   /** Fichier selectionne pour upload. */
   private selectedFile: File | null = null;
 
+  /** Options de dropdown pour les types de documents (filtre — inclut "Tous"). */
+  protected readonly allTypeOptions: SelectOption[] = [];
+
+  /** Options de dropdown pour les modules (filtre — inclut "Tous"). */
+  protected readonly allModuleOptions: SelectOption[] = [];
+
   /** Options de dropdown pour les types de documents. */
   protected readonly documentTypeOptions: SelectOption[] = [
     { label: 'Protocole',             value: DocumentType.PROTOCOL },
@@ -402,8 +408,16 @@ export class DocumentListComponent implements OnInit {
     { label: 'Autre',        value: DocumentModule.OTHER },
   ];
 
-  /** Charge les documents au montage du composant. */
+  /** Initialise les options de filtre et charge les documents. */
   ngOnInit(): void {
+    (this.allTypeOptions as SelectOption[]).push(
+      { label: 'Tous les types', value: '' },
+      ...this.documentTypeOptions,
+    );
+    (this.allModuleOptions as SelectOption[]).push(
+      { label: 'Tous les modules', value: '' },
+      ...this.moduleOptions,
+    );
     this.loadDocuments();
   }
 
@@ -434,8 +448,9 @@ export class DocumentListComponent implements OnInit {
   }
 
   /** Gere l'evenement de chargement lazy de p-table. */
-  protected onLazyLoad(event: { first: number; rows: number }): void {
-    const page = Math.floor(event.first / event.rows);
+  protected onLazyLoad(event: TableLazyLoadEvent): void {
+    const rows = event.rows ?? this.pageSize;
+    const page = Math.floor((event.first ?? 0) / rows);
     this.loadDocuments(page);
   }
 

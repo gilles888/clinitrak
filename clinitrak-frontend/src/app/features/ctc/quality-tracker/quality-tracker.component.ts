@@ -7,7 +7,7 @@ import { DialogModule } from 'primeng/dialog';
 import { DropdownModule } from 'primeng/dropdown';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
-import { TextareaModule } from 'primeng/textarea';
+import { InputTextareaModule } from 'primeng/inputtextarea';
 import { CtcService } from '../../../core/services/ctc.service';
 import {
   EVENT_STATUS_SEVERITY,
@@ -43,7 +43,7 @@ import {
     DropdownModule,
     TableModule,
     TagModule,
-    TextareaModule,
+    InputTextareaModule,
   ],
   template: `
     <div class="tw-space-y-6">
@@ -511,7 +511,7 @@ export class QualityTrackerComponent implements OnInit {
    * @param event événement qualité
    * @returns sévérité PrimeNG
    */
-  protected getEventStatusSeverity(event: QualityEvent): string {
+  protected getEventStatusSeverity(event: QualityEvent): 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined {
     return EVENT_STATUS_SEVERITY[event.status] ?? 'info';
   }
 

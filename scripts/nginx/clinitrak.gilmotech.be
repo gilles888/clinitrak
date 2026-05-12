@@ -1,34 +1,17 @@
-# CliniTrak — Configuration Nginx
+# CliniTrak — Configuration Nginx (HTTP temporaire, en attente DNS + certbot)
 # Fichier source : scripts/nginx/clinitrak.gilmotech.be
 # Déploiement    : /etc/nginx/sites-available/clinitrak.gilmotech.be
 #
-# Activer avec :
-#   sudo ln -s /etc/nginx/sites-available/clinitrak.gilmotech.be \
-#              /etc/nginx/sites-enabled/clinitrak.gilmotech.be
-#   sudo nginx -t && sudo systemctl reload nginx
+# Une fois le DNS configuré et certbot exécuté, ce fichier sera remplacé
+# automatiquement par la version HTTPS via certbot --nginx.
 
-# ── Redirect HTTP → HTTPS ──────────────────────────────────────────────────
 server {
     listen 80;
     listen [::]:80;
-    server_name clinitrak.gilmotech.be;
-    return 301 https://$host$request_uri;
-}
-
-# ── HTTPS ──────────────────────────────────────────────────────────────────
-server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
-    server_name clinitrak.gilmotech.be;
-
-    # SSL — certificat Let's Encrypt (certbot --nginx)
-    ssl_certificate     /etc/letsencrypt/live/clinitrak.gilmotech.be/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/clinitrak.gilmotech.be/privkey.pem;
-    ssl_protocols       TLSv1.2 TLSv1.3;
-    ssl_ciphers         HIGH:!aNULL:!MD5;
+    server_name clinitrak.gilmotech.be _;
 
     # Frontend Angular — SPA statique
-    root /home/claude-worker/clinitrak/clinitrak-frontend/dist/clinitrak-frontend/browser;
+    root /home/claude-worker/clinitrak/web;
     index index.html;
 
     # ── API Gateway (Spring Cloud Gateway, port 8080) ──────────────────────
@@ -48,29 +31,14 @@ server {
     }
 
     # ── Swagger UI (documentation API) ────────────────────────────────────
-    # Commenter en production si non souhaité publiquement
     location /swagger-ui/ {
         proxy_pass       http://localhost:8080/swagger-ui/;
         proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto $scheme;
     }
 
     location /v3/api-docs {
         proxy_pass       http://localhost:8080/v3/api-docs;
         proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # ── MinIO Console (port 9001) ──────────────────────────────────────────
-    # Restreindre par IP en production (décommentez allow/deny)
-    location /minio/ {
-        # allow 10.0.0.0/8;   # VPN interne uniquement
-        # deny  all;
-        proxy_pass              http://localhost:9001/;
-        proxy_set_header        Host $host;
-        proxy_http_version      1.1;
-        proxy_set_header        Upgrade $http_upgrade;
-        proxy_set_header        Connection "upgrade";
     }
 
     # ── SPA fallback — toutes les routes Angular ───────────────────────────

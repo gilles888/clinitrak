@@ -292,7 +292,7 @@ export class DrugStockComponent implements OnInit {
    * @param stock unité de stock
    * @returns sévérité PrimeNG
    */
-  protected getStatusSeverity(stock: DrugStock): string {
+  protected getStatusSeverity(stock: DrugStock): 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined {
     return STOCK_STATUS_SEVERITY[stock.status] ?? 'info';
   }
 

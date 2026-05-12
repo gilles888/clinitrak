@@ -277,7 +277,10 @@ export const ANNUAL_REPORT_STATUS_OPTIONS = [
 /**
  * Mapping décision CE → severité PrimeNG Tag.
  */
-export const DECISION_SEVERITY: Record<string, string> = {
+/** Type sévérité PrimeNG Tag. */
+export type PrimeNGSeverity = 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined;
+
+export const DECISION_SEVERITY: Record<string, PrimeNGSeverity> = {
   PENDING:             'warning',
   APPROVED:            'success',
   REJECTED:            'danger',
@@ -288,7 +291,7 @@ export const DECISION_SEVERITY: Record<string, string> = {
 /**
  * Mapping statut réunion → severité PrimeNG Tag.
  */
-export const MEETING_STATUS_SEVERITY: Record<string, string> = {
+export const MEETING_STATUS_SEVERITY: Record<string, PrimeNGSeverity> = {
   PLANNED:     'info',
   IN_PROGRESS: 'warning',
   COMPLETED:   'success',
@@ -298,7 +301,7 @@ export const MEETING_STATUS_SEVERITY: Record<string, string> = {
 /**
  * Mapping statut rapport annuel → severité PrimeNG Tag.
  */
-export const ANNUAL_REPORT_STATUS_SEVERITY: Record<string, string> = {
+export const ANNUAL_REPORT_STATUS_SEVERITY: Record<string, PrimeNGSeverity> = {
   PENDING:  'info',
   OVERDUE:  'danger',
   RECEIVED: 'warning',

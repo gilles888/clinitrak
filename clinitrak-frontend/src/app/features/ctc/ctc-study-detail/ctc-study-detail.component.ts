@@ -476,7 +476,7 @@ export class CTCStudyDetailComponent implements OnInit {
    * @param visit visite de monitoring
    * @returns sévérité PrimeNG
    */
-  protected getVisitSeverity(visit: MonitoringVisit): string {
+  protected getVisitSeverity(visit: MonitoringVisit): 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined {
     return VISIT_STATUS_SEVERITY[visit.status] ?? 'info';
   }
 
@@ -486,7 +486,7 @@ export class CTCStudyDetailComponent implements OnInit {
    * @param contract contrat financier
    * @returns sévérité PrimeNG
    */
-  protected getContractSeverity(contract: FinancialContract): string {
+  protected getContractSeverity(contract: FinancialContract): 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined {
     return CONTRACT_STATUS_SEVERITY[contract.status] ?? 'info';
   }
 
@@ -496,7 +496,7 @@ export class CTCStudyDetailComponent implements OnInit {
    * @param event événement qualité
    * @returns sévérité PrimeNG
    */
-  protected getEventStatusSeverity(event: QualityEvent): string {
+  protected getEventStatusSeverity(event: QualityEvent): 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined {
     return EVENT_STATUS_SEVERITY[event.status] ?? 'info';
   }
 
@@ -506,7 +506,7 @@ export class CTCStudyDetailComponent implements OnInit {
    * @param req demande statistique
    * @returns sévérité PrimeNG
    */
-  protected getStatsSeverity(req: StatisticsRequest): string {
+  protected getStatsSeverity(req: StatisticsRequest): 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined {
     return STATISTICS_STATUS_SEVERITY[req.status] ?? 'info';
   }
 }

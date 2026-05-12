@@ -9,7 +9,7 @@ import { DropdownModule } from 'primeng/dropdown';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
-import { TextareaModule } from 'primeng/textarea';
+import { InputTextareaModule } from 'primeng/inputtextarea';
 import { TimelineModule } from 'primeng/timeline';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
@@ -48,7 +48,7 @@ import {
     InputTextModule,
     TableModule,
     TagModule,
-    TextareaModule,
+    InputTextareaModule,
     TimelineModule,
     ToastModule,
     TooltipModule,
@@ -470,7 +470,7 @@ export class MeetingDetailComponent implements OnInit {
    * @param status clé du statut
    * @returns severité PrimeNG
    */
-  protected getMeetingStatusSeverity(status: string): string {
+  protected getMeetingStatusSeverity(status: string): 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined {
     return MEETING_STATUS_SEVERITY[status] ?? 'info';
   }
 
@@ -480,7 +480,7 @@ export class MeetingDetailComponent implements OnInit {
    * @param decision clé de la décision
    * @returns severité PrimeNG
    */
-  protected getDecisionSeverity(decision: string): string {
+  protected getDecisionSeverity(decision: string): 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined {
     return DECISION_SEVERITY[decision] ?? 'info';
   }
 

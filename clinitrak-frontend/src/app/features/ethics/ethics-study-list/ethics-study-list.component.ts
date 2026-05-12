@@ -7,9 +7,9 @@ import { CalendarModule } from 'primeng/calendar';
 import { DialogModule } from 'primeng/dialog';
 import { DropdownModule } from 'primeng/dropdown';
 import { InputTextModule } from 'primeng/inputtext';
-import { TableModule } from 'primeng/table';
+import { TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
-import { TextareaModule } from 'primeng/textarea';
+import { InputTextareaModule } from 'primeng/inputtextarea';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
@@ -47,7 +47,7 @@ import {
     InputTextModule,
     TableModule,
     TagModule,
-    TextareaModule,
+    InputTextareaModule,
     ToastModule,
     TooltipModule,
   ],
@@ -398,10 +398,11 @@ export class EthicsStudyListComponent implements OnInit {
    *
    * @param event événement PrimeNG LazyLoadEvent
    */
-  protected onLazyLoad(event: { first: number; rows: number }): void {
-    const page = Math.floor((event.first ?? 0) / (event.rows ?? this.pageSize()));
+  protected onLazyLoad(event: TableLazyLoadEvent): void {
+    const rows = event.rows ?? this.pageSize();
+    const page = Math.floor((event.first ?? 0) / rows);
     this.currentPage.set(page);
-    this.pageSize.set(event.rows ?? 20);
+    this.pageSize.set(rows);
     this.loadReviews();
   }
 
@@ -411,7 +412,7 @@ export class EthicsStudyListComponent implements OnInit {
    * @param decision clé de la décision
    * @returns severité PrimeNG
    */
-  protected getDecisionSeverity(decision: string): string {
+  protected getDecisionSeverity(decision: string): 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined {
     return DECISION_SEVERITY[decision] ?? 'info';
   }
 

@@ -279,7 +279,7 @@ export class CTCDashboardComponent implements OnInit {
    * @param req demande guichet
    * @returns sévérité PrimeNG
    */
-  protected getStatusSeverity(req: TrialDeskRequest): string {
+  protected getStatusSeverity(req: TrialDeskRequest): 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined {
     return REQUEST_STATUS_SEVERITY[req.status] ?? 'info';
   }
 
@@ -289,7 +289,7 @@ export class CTCDashboardComponent implements OnInit {
    * @param req demande guichet
    * @returns sévérité PrimeNG
    */
-  protected getPrioritySeverity(req: TrialDeskRequest): string {
+  protected getPrioritySeverity(req: TrialDeskRequest): 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined {
     return PRIORITY_SEVERITY[req.priority] ?? 'info';
   }
 }

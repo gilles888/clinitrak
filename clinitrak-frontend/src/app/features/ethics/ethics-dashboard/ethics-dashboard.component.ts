@@ -297,7 +297,7 @@ export class EthicsDashboardComponent implements OnInit {
    * @param status clé du statut de réunion
    * @returns severité PrimeNG (info, warning, success, danger)
    */
-  protected getMeetingStatusSeverity(status: string): string {
+  protected getMeetingStatusSeverity(status: string): 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined {
     return MEETING_STATUS_SEVERITY[status] ?? 'info';
   }
 
@@ -307,7 +307,7 @@ export class EthicsDashboardComponent implements OnInit {
    * @param decision clé de la décision
    * @returns severité PrimeNG
    */
-  protected getDecisionSeverity(decision: string): string {
+  protected getDecisionSeverity(decision: string): 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined {
     return DECISION_SEVERITY[decision] ?? 'info';
   }
 }

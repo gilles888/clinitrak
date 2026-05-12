@@ -104,7 +104,7 @@ log_ok "Répertoires et permissions OK"
 # ── 2. Vérification infrastructure ───────────────────────────────────────────
 log_step "Infrastructure"
 
-if ! ss -tlnp | grep -q ':5433 '; then
+if ! pg_isready -h localhost -p 5433 -q 2>/dev/null; then
     log_err "PostgreSQL n'écoute pas sur le port 5433."
     log_err "Lancer d'abord : ./scripts/setup-server.sh"
     exit 1
@@ -163,91 +163,92 @@ UNIT
     chmod 640 "/etc/systemd/system/clinitrak-${name}.service"
 }
 
+# Vars DB communes — passées à chaque service pour matcher les application.yml
+# (DB_HOST/DB_PORT overrident les défauts :localhost/:5432 dans les YML)
+COMMON_DB="-DDB_HOST=localhost \
+  -DDB_PORT=5433 \
+  -DDB_USER=clinitrak \
+  -DDB_USERNAME=clinitrak \
+  -DDB_PASSWORD=${DB_PASSWORD}"
+
 # gateway — pas de DB, rate limiting Redis
 write_service "gateway" "8080" "" \
   "-DREDIS_HOST=localhost \
   -DREDIS_PORT=6379"
 
-# auth-service
+# auth-service — DB_NAME + DB_USER (pas DB_USERNAME)
 write_service "auth" "8081" "clinitrak_auth" \
-  "-DSPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/clinitrak_auth \
-  -DSPRING_DATASOURCE_USERNAME=clinitrak \
-  -DSPRING_DATASOURCE_PASSWORD=${DB_PASSWORD} \
+  "${COMMON_DB} \
+  -DDB_NAME=clinitrak_auth \
   -DSPRING_REDIS_HOST=localhost \
   -DSPRING_REDIS_PORT=6379"
 
-# study-service
-write_service "study" "8082" "clinitrak_study" \
-  "-DSPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/clinitrak_study \
-  -DSPRING_DATASOURCE_USERNAME=clinitrak \
-  -DSPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}"
+# study-service — port 8092 (8082 occupé par arsbotanica)
+write_service "study" "8092" "clinitrak_study" \
+  "${COMMON_DB} \
+  -DDB_NAME=clinitrak_study"
 
-# ethics-service
-write_service "ethics" "8083" "clinitrak_ethics" \
-  "-DSPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/clinitrak_ethics \
-  -DSPRING_DATASOURCE_USERNAME=clinitrak \
-  -DSPRING_DATASOURCE_PASSWORD=${DB_PASSWORD} \
+# ethics-service — port 8093 (8083 occupé par CareTrack)
+write_service "ethics" "8093" "clinitrak_ethics" \
+  "${COMMON_DB} \
+  -DDB_NAME=clinitrak_ethics \
   -DMAIL_HOST=${MAIL_HOST} \
   -DMAIL_PORT=${MAIL_PORT} \
   -DMAIL_USERNAME=${MAIL_USERNAME} \
   -DMAIL_PASSWORD=${MAIL_PASSWORD}"
 
-# ctc-service
+# ctc-service — CTC_DB_NAME + DB_USERNAME
 write_service "ctc" "8084" "clinitrak_ctc" \
-  "-DSPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/clinitrak_ctc \
-  -DSPRING_DATASOURCE_USERNAME=clinitrak \
-  -DSPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}"
+  "${COMMON_DB} \
+  -DCTC_DB_NAME=clinitrak_ctc \
+  -DSTUDY_SERVICE_URL=http://localhost:8092"
 
-# pharmacy-service
+# pharmacy-service — PHARMACY_DB_NAME + DB_USERNAME
 write_service "pharmacy" "8085" "clinitrak_pharmacy" \
-  "-DSPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/clinitrak_pharmacy \
-  -DSPRING_DATASOURCE_USERNAME=clinitrak \
-  -DSPRING_DATASOURCE_PASSWORD=${DB_PASSWORD} \
+  "${COMMON_DB} \
+  -DPHARMACY_DB_NAME=clinitrak_pharmacy \
   -DPHARMACY_ENCRYPTION_KEY=${PHARMACY_ENCRYPTION_KEY} \
   -DMAIL_HOST=${MAIL_HOST} \
-  -DMAIL_PORT=${MAIL_PORT}"
+  -DMAIL_PORT=${MAIL_PORT} \
+  -DSTUDY_SERVICE_URL=http://localhost:8092"
 
-# exchange-service
+# exchange-service — EXCHANGE_DB_NAME + DB_USERNAME
 write_service "exchange" "8086" "clinitrak_exchange" \
-  "-DSPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/clinitrak_exchange \
-  -DSPRING_DATASOURCE_USERNAME=clinitrak \
-  -DSPRING_DATASOURCE_PASSWORD=${DB_PASSWORD} \
+  "${COMMON_DB} \
+  -DEXCHANGE_DB_NAME=clinitrak_exchange \
   -DEXCHANGE_JWT_SECRET=${EXCHANGE_JWT_SECRET} \
   -DMAIL_HOST=${MAIL_HOST} \
   -DMAIL_PORT=${MAIL_PORT}"
 
-# document-service
+# document-service — DOCUMENT_DB_NAME + DB_USERNAME
 write_service "document" "8088" "clinitrak_document" \
-  "-DSPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/clinitrak_document \
-  -DSPRING_DATASOURCE_USERNAME=clinitrak \
-  -DSPRING_DATASOURCE_PASSWORD=${DB_PASSWORD} \
+  "${COMMON_DB} \
+  -DDOCUMENT_DB_NAME=clinitrak_document \
   -DMINIO_ENDPOINT=http://localhost:9000 \
   -DMINIO_ACCESS_KEY=${MINIO_ACCESS_KEY} \
   -DMINIO_SECRET_KEY=${MINIO_SECRET_KEY}"
 
-# notification-service
+# notification-service — NOTIFICATION_DB_NAME + DB_USERNAME + SMTP (pas MAIL)
 write_service "notification" "8090" "clinitrak_notification" \
-  "-DSPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/clinitrak_notification \
-  -DSPRING_DATASOURCE_USERNAME=clinitrak \
-  -DSPRING_DATASOURCE_PASSWORD=${DB_PASSWORD} \
-  -DMAIL_HOST=${MAIL_HOST} \
-  -DMAIL_PORT=${MAIL_PORT} \
-  -DMAIL_USERNAME=${MAIL_USERNAME} \
-  -DMAIL_PASSWORD=${MAIL_PASSWORD}"
+  "${COMMON_DB} \
+  -DNOTIFICATION_DB_NAME=clinitrak_notification \
+  -DSMTP_HOST=${MAIL_HOST} \
+  -DSMTP_PORT=${MAIL_PORT} \
+  -DSMTP_USERNAME=${MAIL_USERNAME} \
+  -DSMTP_PASSWORD=${MAIL_PASSWORD}"
 
-# batch-service
+# batch-service — BATCH_DB_NAME + DB_USERNAME
 write_service "batch" "8089" "clinitrak_batch" \
-  "-DSPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/clinitrak_batch \
-  -DSPRING_DATASOURCE_USERNAME=clinitrak \
-  -DSPRING_DATASOURCE_PASSWORD=${DB_PASSWORD} \
+  "${COMMON_DB} \
+  -DBATCH_DB_NAME=clinitrak_batch \
   -DNOTIFICATION_SERVICE_URL=http://localhost:8090 \
-  -DPHARMACY_SERVICE_URL=http://localhost:8085"
+  -DPHARMACY_SERVICE_URL=http://localhost:8085 \
+  -Dspring.main.allow-bean-definition-overriding=true"
 
-# admin-service
+# admin-service — ADMIN_DB_NAME + DB_USERNAME
 write_service "admin" "8091" "clinitrak_admin" \
-  "-DSPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/clinitrak_admin \
-  -DSPRING_DATASOURCE_USERNAME=clinitrak \
-  -DSPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}"
+  "${COMMON_DB} \
+  -DADMIN_DB_NAME=clinitrak_admin"
 
 systemctl daemon-reload
 log_ok "11 fichiers systemd écrits et rechargés"
@@ -346,8 +347,8 @@ deploy_svc() {
 if [ "${TARGET}" = "all" ] || [ "${TARGET}" = "backend" ]; then
     # Ordre des dépendances
     deploy_svc "auth"         8081
-    deploy_svc "study"        8082
-    deploy_svc "ethics"       8083
+    deploy_svc "study"        8092
+    deploy_svc "ethics"       8093
     deploy_svc "ctc"          8084
     deploy_svc "pharmacy"     8085
     deploy_svc "exchange"     8086
@@ -359,7 +360,7 @@ if [ "${TARGET}" = "all" ] || [ "${TARGET}" = "backend" ]; then
 elif [ "${TARGET}" != "frontend" ]; then
     # Service individuel
     declare -A SVC_PORTS=(
-        [auth]=8081 [study]=8082 [ethics]=8083 [ctc]=8084
+        [auth]=8081 [study]=8092 [ethics]=8093 [ctc]=8084
         [pharmacy]=8085 [exchange]=8086 [document]=8088
         [notification]=8090 [batch]=8089 [admin]=8091 [gateway]=8080
     )

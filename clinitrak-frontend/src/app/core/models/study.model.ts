@@ -220,6 +220,7 @@ export interface StudySearchCriteria {
   ctisNumber?: string;
   acronym?: string;
   titleKeyword?: string;
+  studyType?: string;
   sponsorType?: SponsorType;
   status?: StudyStatus;
   therapeuticArea?: string;

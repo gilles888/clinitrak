@@ -158,7 +158,8 @@ export class UserManagementComponent {
    *
    * @param event Événement de sélection de ligne
    */
-  protected onUserSelect(event: { data: AdminUser }): void {
+  protected onUserSelect(event: { data?: AdminUser }): void {
+    if (!event.data) return;
     const user = event.data;
     this.selectedUser.set(user.id);
 

@@ -100,8 +100,11 @@ export interface ExchangeLoginResponse {
   user: ExternalUser;
 }
 
+/** Type sévérité PrimeNG Tag. */
+export type PrimeNGSeverity = 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined;
+
 /** Severité PrimeNG par statut Exchange (pour p-tag). */
-export const EXCHANGE_STATUS_SEVERITY: Record<ExchangeStatus, string> = {
+export const EXCHANGE_STATUS_SEVERITY: Record<ExchangeStatus, PrimeNGSeverity> = {
   [ExchangeStatus.DRAFT]:        'secondary',
   [ExchangeStatus.SUBMITTED]:    'info',
   [ExchangeStatus.UNDER_REVIEW]: 'warning',

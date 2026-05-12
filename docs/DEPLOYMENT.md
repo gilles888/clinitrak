@@ -6,7 +6,6 @@
 |-----------|--------|
 | Hôte | `vmi2936009` |
 | IP publique IPv4 | `45.88.223.242` |
-| IP publique IPv6 | `2a02:c207:2293:6009::1` |
 | OS | Ubuntu 22.04 (systemd) |
 | Utilisateur applicatif | `claude-worker` |
 | Domaine | `clinitrak.gilmotech.be` |
@@ -22,126 +21,209 @@ clinitrak.gilmotech.be    AAAA  2a02:c207:2293:6009::1
 
 ```
 /home/claude-worker/tools/
-├── jdk-21.0.5+11/          # Java 21 (JAVA_HOME à pointer ici)
+├── jdk-21.0.5+11/          # Java 21 (JAVA_HOME)
 └── apache-maven-3.9.6/     # Maven 3.9
 ```
 
 - **Node.js** : v20.20.1 (npm 10.8.2)
 - **nginx** + **certbot** : installés système
-- **PostgreSQL 16** : port **5433** (non-standard — partagé avec CareTrack)
+- **PostgreSQL 16** : port **5433** (non-standard — partagé avec CareTrack et arsbotanica)
 - **Redis 7** : installé par `setup-server.sh`
 - **MinIO** : binaire téléchargé par `setup-server.sh`
 
 ---
 
-## Déploiement bare-metal (production)
+## Mapping des services (ports réels)
 
-CliniTrak est déployé en **bare-metal** sur `vmi2936009` : chaque service Spring Boot tourne comme un service systemd indépendant. Il n'y a pas de Docker en production.
+> **Attention** : study et ethics n'utilisent **pas** les ports 8082/8083.
+> Ces ports sont occupés par d'autres applications sur le serveur (arsbotanica sur 8082, CareTrack sur 8083).
 
-### Mapping des services
-
-| Service | Port | Base de données | Fichier systemd |
-|---------|------|----------------|-----------------|
-| gateway | 8080 | — | clinitrak-gateway.service |
-| auth-service | 8081 | clinitrak_auth | clinitrak-auth.service |
-| study-service | 8082 | clinitrak_study | clinitrak-study.service |
-| ethics-service | 8084 | clinitrak_ethics | clinitrak-ethics.service |
-| ctc-service | 8085 | clinitrak_ctc | clinitrak-ctc.service |
-| pharmacy-service | 8086 | clinitrak_pharmacy | clinitrak-pharmacy.service |
-| exchange-service | 8087 | clinitrak_exchange | clinitrak-exchange.service |
-| document-service | 8088 | clinitrak_document | clinitrak-document.service |
-| batch-service | 8089 | clinitrak_batch | clinitrak-batch.service |
-| notification-service | 8090 | clinitrak_notification | clinitrak-notification.service |
-| admin-service | 8091 | clinitrak_admin | clinitrak-admin.service |
+| Service | Port | Base de données | Statut |
+|---------|------|----------------|--------|
+| gateway | 8080 | — | ✅ prod |
+| auth-service | 8081 | clinitrak_auth | ✅ prod |
+| study-service | **8092** | clinitrak_study | ✅ prod |
+| ctc-service | 8084 | clinitrak_ctc | ✅ prod |
+| pharmacy-service | 8085 | clinitrak_pharmacy | ✅ prod |
+| exchange-service | 8086 | clinitrak_exchange | ✅ prod |
+| document-service | 8088 | clinitrak_document | ✅ prod |
+| batch-service | 8089 | clinitrak_batch | ✅ prod |
+| notification-service | 8090 | clinitrak_notification | ✅ prod |
+| admin-service | 8091 | clinitrak_admin | ✅ prod |
+| ethics-service | **8093** | clinitrak_ethics | ✅ prod |
 
 ---
 
-### 1. Initialisation serveur (une seule fois)
+## Déploiement bare-metal
+
+CliniTrak tourne en **bare-metal** sur `vmi2936009` : chaque service Spring Boot est un service systemd indépendant. Pas de Docker en production.
+
+### Script principal : `fix-deploy.sh`
+
+```bash
+# Déploiement complet (backend + frontend + nginx)
+sudo bash -c 'set -a && source /home/claude-worker/clinitrak/.env.prod && set +a && bash /home/claude-worker/clinitrak/fix-deploy.sh'
+
+# Backend uniquement (skip Angular build)
+sudo bash -c 'set -a && source /home/claude-worker/clinitrak/.env.prod && set +a && SKIP_FRONTEND=1 bash /home/claude-worker/clinitrak/fix-deploy.sh'
+
+# Frontend uniquement
+sudo bash -c 'set -a && source /home/claude-worker/clinitrak/.env.prod && set +a && TARGET=frontend bash /home/claude-worker/clinitrak/fix-deploy.sh'
+
+# Un seul service (ex : après un hotfix)
+sudo bash -c 'set -a && source /home/claude-worker/clinitrak/.env.prod && set +a && TARGET=auth bash /home/claude-worker/clinitrak/fix-deploy.sh'
+sudo bash -c 'set -a && source /home/claude-worker/clinitrak/.env.prod && set +a && TARGET=ethics bash /home/claude-worker/clinitrak/fix-deploy.sh'
+```
+
+> **Important** : toujours utiliser `set -a && source .env.prod && set +a` dans le contexte sudo.
+> `sudo -E` seul ne propage pas les variables non exportées.
+
+---
+
+### Étape 1 — Initialisation serveur (une seule fois)
 
 ```bash
 cd /home/claude-worker/clinitrak
 
-# Créer et remplir les secrets
-cp .env.prod.example .env.prod   # ou copier depuis le gestionnaire de mots de passe
+# Créer le fichier de secrets
+cp .env.example .env.prod
 chmod 600 .env.prod
 nano .env.prod   # Renseigner TOUTES les valeurs obligatoires
 
-# Lancer le setup (installe Redis, MinIO, crée les bases PostgreSQL)
-source .env.prod
-sudo -E DB_PASSWORD="$DB_PASSWORD" \
-        MINIO_ACCESS_KEY="$MINIO_ACCESS_KEY" \
-        MINIO_SECRET_KEY="$MINIO_SECRET_KEY" \
-        ./scripts/setup-server.sh
+# Setup : installe Redis, MinIO, crée les bases PostgreSQL, installe les systemd
+sudo bash -c 'set -a && source .env.prod && set +a && bash scripts/setup-server.sh'
 ```
 
-### 2. Configuration Nginx + SSL
+### Étape 2 — Configuration Nginx
 
 ```bash
-# Copier la config nginx
+# Créer le lien symbolique (HTTP d'abord, en attendant le DNS)
 sudo cp scripts/nginx/clinitrak.gilmotech.be /etc/nginx/sites-available/
-sudo ln -s /etc/nginx/sites-available/clinitrak.gilmotech.be \
-           /etc/nginx/sites-enabled/clinitrak.gilmotech.be
+sudo ln -sf /etc/nginx/sites-available/clinitrak.gilmotech.be \
+            /etc/nginx/sites-enabled/clinitrak.gilmotech.be
+sudo nginx -t && sudo systemctl reload nginx
+```
 
-# Vérifier et recharger
-sudo nginx -t
-sudo systemctl reload nginx
+### Étape 3 — SSL (après propagation DNS)
 
-# Obtenir le certificat SSL (DNS doit pointer vers le serveur)
+```bash
 sudo certbot --nginx -d clinitrak.gilmotech.be \
      --email gilmoreau73@gmail.com --agree-tos --non-interactive
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
-### 3. Premier déploiement complet
+### Étape 4 — Premier déploiement complet
 
 ```bash
-# Commande de référence (déploiement complet)
-source .env.prod && sudo -E ./scripts/deploy.sh all
+# Préparer le swap si le serveur a peu de RAM (Angular build OOM)
+sudo fallocate -l 2G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+
+# Déployer
+sudo bash -c 'set -a && source /home/claude-worker/clinitrak/.env.prod && set +a && bash /home/claude-worker/clinitrak/fix-deploy.sh'
 ```
 
-Le script `deploy.sh` effectue dans l'ordre :
-1. Valide les variables obligatoires
-2. Corrige les permissions (`chown claude-worker`)
-3. Build Maven de chaque service (`-DskipTests`)
-4. Copie les JARs dans `/home/claude-worker/clinitrak/jars/`
-5. Installe les fichiers systemd avec les vraies valeurs (substitution des PLACEHOLDER)
-6. Démarre chaque service dans l'ordre des dépendances
-7. Build Angular (`npm install --legacy-peer-deps && npm run build --configuration production`)
-8. Met à jour la config Nginx si modifiée
-
-### 4. Déploiements partiels
+### Étape 5 — Health check
 
 ```bash
-# Backend uniquement (tous les services Java)
-source .env.prod && sudo -E ./scripts/deploy.sh backend
+# Status systemd de tous les services
+sudo systemctl status 'clinitrak-*' --no-pager | grep -E "(Active|Failed)"
 
-# Frontend uniquement (Angular)
-source .env.prod && sudo -E ./scripts/deploy.sh frontend
-
-# Un seul service (ex : auth après un hotfix)
-source .env.prod && sudo -E ./scripts/deploy.sh auth
-source .env.prod && sudo -E ./scripts/deploy.sh gateway
-```
-
-### 5. Vérification de santé
-
-```bash
-./scripts/check-health.sh
+# Vérification HTTP
+for port in 8080 8081 8084 8085 8086 8088 8089 8090 8091 8092 8093; do
+  code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 3 http://localhost:$port/actuator/health)
+  echo "$port: $code"
+done
 ```
 
 ---
 
-## Variables d'environnement obligatoires en production
+## Variables d'environnement obligatoires
 
 | Variable | Description | Génération |
 |----------|-------------|------------|
 | `DB_PASSWORD` | Mot de passe PostgreSQL user `clinitrak` | `openssl rand -base64 24` |
-| `JWT_SECRET` | Secret HMAC-SHA256 (min 32 chars), partagé par tous les services | `openssl rand -base64 64` |
-| `EXCHANGE_JWT_SECRET` | JWT distinct pour le portail externe | `openssl rand -base64 64` |
-| `PHARMACY_ENCRYPTION_KEY` | Clé AES-256 (32 chars hex) pour chiffrement Pharmacie | `openssl rand -hex 16` |
+| `JWT_SECRET` | Secret HMAC-SHA256 (min 32 chars) | `openssl rand -base64 64` |
+| `EXCHANGE_JWT_SECRET` | JWT distinct portail externe | `openssl rand -base64 64` |
+| `PHARMACY_ENCRYPTION_KEY` | Clé AES-256 (32 chars hex) pour pharmacie | `openssl rand -hex 16` |
 | `MINIO_ACCESS_KEY` | Access key MinIO | ex: `clinitrak_minio` |
 | `MINIO_SECRET_KEY` | Secret key MinIO | `openssl rand -base64 24` |
 
-> Conserver `JWT_SECRET` identique entre les déploiements. Le changer invalide tous les tokens actifs.
+Variables optionnelles (SMTP) :
+
+| Variable | Défaut | Description |
+|----------|--------|-------------|
+| `MAIL_HOST` | localhost | Serveur SMTP |
+| `MAIL_PORT` | 587 | Port SMTP |
+| `MAIL_USERNAME` | — | Login SMTP |
+| `MAIL_PASSWORD` | — | Mot de passe SMTP |
+
+> **Conserver `JWT_SECRET` identique** entre les déploiements. Le changer invalide tous les tokens actifs.
+
+---
+
+## Accès utilisateurs
+
+### Premiers accès — Créer le super-admin
+
+La base de données est initialisée **sans utilisateur** (uniquement les rôles et permissions seed).
+Le premier compte doit être créé via l'API après le démarrage du service :
+
+```bash
+curl -s -X POST https://clinitrak.gilmotech.be/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -H "X-Tenant-ID: saintluc" \
+  -d '{
+    "email": "admin@clinitrak.be",
+    "password": "MotDePasseForte123!",
+    "firstName": "Admin",
+    "lastName": "CliniTrak"
+  }'
+```
+
+Le rôle `ROLE_SUPER_ADMIN` doit ensuite être assigné directement en base :
+
+```sql
+-- Se connecter à la base auth
+psql -h localhost -p 5433 -U clinitrak -d clinitrak_auth
+
+-- Trouver l'ID de l'utilisateur créé
+SELECT id, email FROM users WHERE email = 'admin@clinitrak.be';
+
+-- Assigner le rôle SUPER_ADMIN
+INSERT INTO user_roles (user_id, role_id)
+VALUES (
+  '<UUID_USER>',
+  '10000000-0000-0000-0000-000000000001'
+);
+```
+
+### Rôles disponibles
+
+| Rôle | Description | Permissions clés |
+|------|-------------|-----------------|
+| `ROLE_SUPER_ADMIN` | Admin global plateforme | Toutes les permissions |
+| `ROLE_ADMIN_TENANT` | Admin d'une institution | ADMIN:USERS, ADMIN:AUDIT, lectures |
+| `ROLE_CE_SECRETARY` | Secrétariat Comité d'Éthique | ETHICS:READ/SUBMIT, STUDY:READ |
+| `ROLE_CE_COORDINATOR` | Coordinateur CE | ETHICS:READ/REVIEW/APPROVE |
+| `ROLE_CTC_DESK` | Secrétariat CTC | CTC:READ/CREATE, STUDY:READ |
+| `ROLE_CTC_CRA` | Clinical Research Associate | CTC + STUDY gestion complète |
+| `ROLE_CTC_PM` | Project Manager CTC | Études + CTC + BILLING:READ |
+| `ROLE_CTC_COFI` | Coordinateur financier | BILLING complet |
+| `ROLE_PHARMACIST` | Pharmacien | PHARMACY complet |
+| `ROLE_INVESTIGATOR` | Investigateur | STUDY:READ, ETHICS:SUBMIT |
+| `ROLE_EXTERNAL` | Collaborateur externe | STUDY:READ, DOC:READ |
+
+### Tenant de démonstration
+
+| Paramètre | Valeur |
+|-----------|--------|
+| Slug | `saintluc` |
+| Nom | Cliniques Universitaires Saint-Luc |
+| Domaine | `saintluc.clinitrak.be` |
+| Header API | `X-Tenant-ID: saintluc` |
 
 ---
 
@@ -154,44 +236,35 @@ sudo systemctl status clinitrak-auth
 # Redémarrage manuel
 sudo systemctl restart clinitrak-auth
 
-# Logs en temps réel (systemd journal)
+# Logs en temps réel
 journalctl -u clinitrak-auth -f
 
-# Logs applicatifs (fichier)
-tail -f /var/log/clinitrak/auth-service.log
+# Logs fichier
+tail -f /var/log/clinitrak/auth.log
 tail -f /var/log/clinitrak/gateway.log
 
-# Après modification manuelle d'un .service dans /etc/systemd/system/
+# Après modification manuelle d'un .service
 sudo systemctl daemon-reload
 sudo systemctl restart clinitrak-<service>
-
-# Désactiver un service
-sudo systemctl disable clinitrak-batch
-sudo systemctl stop clinitrak-batch
 ```
 
-### Ordre de démarrage des dépendances
+### Ordre de démarrage (dépendances)
 
 ```
-redis.service         (Redis 7)
-minio.service         (MinIO)
-                ↓
-clinitrak-auth        (authentification)
-                ↓
-clinitrak-study       (études — Feign vers auth)
-                ↓
-clinitrak-ethics      (Feign vers study)
-clinitrak-ctc         (Feign vers study)
-clinitrak-pharmacy    (Feign vers study)
-                ↓
-clinitrak-exchange    (JWT distinct — indépendant)
-clinitrak-document    (MinIO — indépendant)
-clinitrak-notification (SMTP — indépendant)
-clinitrak-admin        (indépendant)
-                ↓
-clinitrak-batch       (Feign vers notification + pharmacy)
-                ↓
-clinitrak-gateway     (proxy vers tous les services)
+PostgreSQL :5433 + Redis :6379 + MinIO :9000
+                    ↓
+           clinitrak-auth :8081
+                    ↓
+           clinitrak-study :8092
+                    ↓
+  clinitrak-ethics :8093   clinitrak-ctc :8084   clinitrak-pharmacy :8085
+                    ↓
+  clinitrak-exchange :8086  clinitrak-document :8088
+  clinitrak-notification :8090  clinitrak-admin :8091
+                    ↓
+           clinitrak-batch :8089
+                    ↓
+           clinitrak-gateway :8080
 ```
 
 ---
@@ -199,44 +272,29 @@ clinitrak-gateway     (proxy vers tous les services)
 ## Procédure de mise à jour habituelle
 
 ```bash
-# 1. Mettre à jour le code
 cd /home/claude-worker/clinitrak
 git pull origin main
 
-# 2. Déployer
-source .env.prod && sudo -E ./scripts/deploy.sh all
-
-# 3. Vérifier
-./scripts/check-health.sh
+sudo bash -c 'set -a && source /home/claude-worker/clinitrak/.env.prod && set +a && bash /home/claude-worker/clinitrak/fix-deploy.sh'
 ```
 
 ---
 
-## Infrastructure complémentaire (bare-metal)
+## Infrastructure complémentaire
 
 ### Redis
 
 ```bash
-# Statut
 sudo systemctl status redis-server
-
-# Vérifier connexion
 redis-cli ping   # → PONG
-
-# Logs
 journalctl -u redis-server -n 50
 ```
 
 ### MinIO
 
 ```bash
-# Statut
 sudo systemctl status minio
-
-# Console web
-# http://localhost:9001  (ou https://clinitrak.gilmotech.be/minio/)
-
-# Logs
+# Console web : http://localhost:9001
 tail -f /var/log/clinitrak/minio.log
 ```
 
@@ -249,56 +307,107 @@ psql -h localhost -p 5433 -U clinitrak -d clinitrak_auth
 # Via superutilisateur
 sudo -u postgres psql -p 5433
 
-# Vérifier les connexions actives
+# Connexions actives
 sudo -u postgres psql -p 5433 -c "SELECT datname, count(*) FROM pg_stat_activity GROUP BY datname;"
+
+# Vérifier que PostgreSQL écoute
+pg_isready -h localhost -p 5433
 ```
 
 ---
 
 ## Migrations Liquibase
 
-Les migrations s'exécutent **automatiquement au démarrage** de chaque service. Elles sont idempotentes.
-
-Pour vérifier l'état sans démarrer le service :
+Les migrations s'exécutent automatiquement au démarrage. Pour vérifier manuellement :
 
 ```bash
-cd /home/claude-worker/clinitrak/auth-service
 export JAVA_HOME=/home/claude-worker/tools/jdk-21.0.5+11
 export PATH=$JAVA_HOME/bin:$PATH
 /home/claude-worker/tools/apache-maven-3.9.6/bin/mvn liquibase:status \
+    -pl auth-service \
     -Dspring.profiles.active=prod \
-    -DDB_URL=jdbc:postgresql://localhost:5433/clinitrak_auth \
+    -DDB_HOST=localhost \
+    -DDB_PORT=5433 \
+    -DDB_NAME=clinitrak_auth \
     -DDB_USER=clinitrak \
-    -DDB_PASSWORD="$DB_PASSWORD"
+    -DDB_PASSWORD="$(grep DB_PASSWORD /home/claude-worker/clinitrak/.env.prod | cut -d= -f2)"
 ```
 
 ---
 
-## Pièges connus (leçons CareTrack et CliniTrak)
+## Pièges connus
 
-### Ne pas utiliser `${VAR:-default}` dans les `-D` systemd
+### Ports 8082 et 8083 occupés
 
-Spring Boot 3.3+ interprète ce pattern comme un placeholder Spring et génère une `PlaceholderResolutionException`. Les fichiers `.service` dans `scripts/systemd/` utilisent des valeurs `PLACEHOLDER_*` que `deploy.sh` remplace via `sed`. Ne jamais écrire les vraies valeurs dans ces fichiers versionnés.
+`arsbotanica` tourne sur 8082, `CareTrack` sur 8083. CliniTrak utilise donc :
+- study-service → **8092**
+- ethics-service → **8093**
 
-### Permissions root sur `target/` et les JARs
+La gateway et les configurations Feign internes ont été mises à jour en conséquence.
 
-Si Maven tourne en `sudo`, les fichiers `target/` appartiennent à `root`. `deploy.sh` corrige automatiquement avec `chown -R claude-worker` avant chaque build.
+### `set -a` obligatoire avec sudo
 
-### Health check trop court
+```bash
+# ❌ Ne propage pas les variables
+source .env.prod && sudo -E ./fix-deploy.sh
 
-Spring Boot prend ~25-40s à démarrer sur ce serveur. `HEALTH_WAIT=45` dans `deploy.sh`.
+# ✅ Exporte toutes les variables avant sudo
+sudo bash -c 'set -a && source /home/claude-worker/clinitrak/.env.prod && set +a && bash fix-deploy.sh'
+```
+
+### Angular build OOM (Out Of Memory)
+
+Avec 11 services Java en mémoire, le build Angular est tué par le kernel. Solution :
+
+```bash
+sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile
+sudo mkswap /swapfile && sudo swapon /swapfile
+```
 
 ### `npm install` : toujours `--legacy-peer-deps`
 
-Angular 20 a des conflits de peer deps. `npm ci` échoue. Toujours utiliser `npm install --legacy-peer-deps`.
+Angular 20 a des conflits de peer deps. `npm ci` échoue. Toujours utiliser `--legacy-peer-deps`.
+
+### Mail health indicator en production
+
+Sans serveur SMTP disponible, Spring Boot signale le service comme DOWN (HTTP 503).
+Solution dans `application.yml` de tout service utilisant `spring.mail` :
+
+```yaml
+management:
+  health:
+    mail:
+      enabled: false
+```
+
+Appliqué à : `ethics-service`, `notification-service`.
+
+### `@Configuration` obligatoire pour les jobs Spring Batch 5.x
+
+En Spring Batch 5.x, une classe contenant `@Bean(name = "monJob")` doit être annotée `@Configuration("nomUnique")` et non `@Component`. Sinon, le bean est enregistré deux fois et Spring lève une `BeanDefinitionOverrideException`.
+
+Appliqué à : `WeeklyReportJob`, `MonthlyBillingJob` dans `batch-service`.
 
 ### PostgreSQL sur le port 5433
 
-Partagé avec CareTrack. Ne jamais modifier ce port. Le port standard 5432 est réservé ou non utilisé.
+Partagé avec CareTrack. Les YAMLs ont des défauts sur 5432. Toujours passer `-DDB_PORT=5433` explicitement via `fix-deploy.sh` (variable `COMMON_DB`).
 
-### MaxRAMPercentage à 20% par service
+### `angular.json` absent du repo
 
-11 services Java + Redis + MinIO = charge importante. Avec 20% par service, le heap max de chaque JVM est ~20% de la RAM totale de la machine. Sur un serveur à 4 Go RAM, c'est ~800 Mo par JVM — suffisant pour Spring Boot, à ajuster si OOMKilled.
+Le fichier `clinitrak-frontend/angular.json` n'a jamais été committé. Il est présent sur le serveur. Si le repo est cloné sur une nouvelle machine, le recréer avec la configuration Angular 20 (`@angular-devkit/build-angular:application`, output `dist/clinitrak-frontend`).
+
+### TypeScript ≥ 5.8.0 requis
+
+Angular 20 requiert TypeScript ≥ 5.8.0. La version initiale était 5.5.4.
+
+### PrimeNG 17 — API modifiée
+
+| Ancienne importation | Nouvelle importation |
+|---------------------|---------------------|
+| `primeng/textarea` | `primeng/inputtextarea` |
+| `primeng/datepicker` | `primeng/calendar` |
+| `severity="warn"` | `severity="warning"` |
+| `severity: string` | `severity: 'success' \| 'info' \| 'warning' \| 'danger'` |
 
 ---
 
@@ -307,41 +416,43 @@ Partagé avec CareTrack. Ne jamais modifier ce port. Le port standard 5432 est r
 ### Service ne démarre pas
 
 ```bash
-# Vérifier les logs systemd
+# Logs systemd
 journalctl -u clinitrak-auth --no-pager -n 50
 
-# Vérifier les logs applicatifs
-tail -50 /var/log/clinitrak/auth-service.log
+# Logs applicatifs
+tail -50 /var/log/clinitrak/auth.log
 
-# Vérifier que le JAR est bien là
+# JAR présent ?
 ls -lh /home/claude-worker/clinitrak/jars/
+```
+
+### Service retourne HTTP 503
+
+Vérifier les health indicators. Un indicateur en erreur (mail, Redis, DB) met le service DOWN :
+
+```bash
+curl -s http://localhost:8093/actuator/health | python3 -m json.tool
 ```
 
 ### OOMKilled (manque de mémoire)
 
-Réduire `MaxRAMPercentage` dans le fichier `.service` (ex: 15%) ou désactiver les services non utilisés (`systemctl stop clinitrak-batch`).
-
-### Erreur de connexion PostgreSQL
+Réduire `MaxRAMPercentage` dans `fix-deploy.sh` (ligne `write_service`) ou désactiver les services non utilisés :
 
 ```bash
-# Vérifier que PostgreSQL écoute sur 5433
-ss -tlnp | grep 5433
-
-# Tester la connexion
-psql -h localhost -p 5433 -U clinitrak -d clinitrak_auth -c "SELECT 1;"
+sudo systemctl stop clinitrak-batch
 ```
 
 ### JWT invalide entre services
 
-Vérifier que `JWT_SECRET` est identique dans tous les fichiers `.service` installés :
+Vérifier que `JWT_SECRET` est identique dans tous les services actifs :
 
 ```bash
-grep JWT_SECRET /etc/systemd/system/clinitrak-*.service
+grep -h JWT_SECRET /etc/systemd/system/clinitrak-*.service | sort -u
 ```
 
-### MinIO inaccessible depuis document-service
+### MinIO inaccessible
 
-Sur bare-metal, l'endpoint est `http://localhost:9000` (pas `http://minio:9000` comme en Docker).
+En bare-metal, l'endpoint est `http://localhost:9000` (pas `http://minio:9000` comme en Docker).
 
 ### Liquibase : "Table already exists"
 

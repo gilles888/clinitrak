@@ -1,11 +1,11 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { CheckboxModule } from 'primeng/checkbox';
-import { DatePickerModule } from 'primeng/datepicker';
+import { CalendarModule } from 'primeng/calendar';
 import { DropdownModule } from 'primeng/dropdown';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
@@ -52,7 +52,7 @@ import { StudyStatusBadgeComponent } from '../../../shared/components/study-stat
     ButtonModule,
     CardModule,
     CheckboxModule,
-    DatePickerModule,
+    CalendarModule,
     DropdownModule,
     InputNumberModule,
     InputTextModule,
@@ -87,10 +87,10 @@ import { StudyStatusBadgeComponent } from '../../../shared/components/study-stat
         </div>
       } @else {
         <!-- Stepper -->
-        <p-stepper [linear]="true" [(value)]="activeStepIndex">
+        <p-stepper [linear]="true" [(activeStep)]="activeStepIndex">
 
           <!-- ─── Étape 1 : Identification ─── -->
-          <p-step-panel header="Identification" [value]="0">
+          <p-stepperPanel header="Identification">
             <ng-template pTemplate="content" let-prevCallback="prevCallback" let-nextCallback="nextCallback">
               <div class="tw-pt-4 tw-space-y-6">
                 <p-card styleClass="tw-border tw-border-gray-100">
@@ -196,10 +196,10 @@ import { StudyStatusBadgeComponent } from '../../../shared/components/study-stat
                 </div>
               </div>
             </ng-template>
-          </p-step-panel>
+          </p-stepperPanel>
 
           <!-- ─── Étape 2 : Détails scientifiques ─── -->
-          <p-step-panel header="Détails scientifiques" [value]="1">
+          <p-stepperPanel header="Détails scientifiques">
             <ng-template pTemplate="content" let-prevCallback="prevCallback" let-nextCallback="nextCallback">
               <div class="tw-pt-4 tw-space-y-6">
                 <p-card styleClass="tw-border tw-border-gray-100">
@@ -242,7 +242,7 @@ import { StudyStatusBadgeComponent } from '../../../shared/components/study-stat
 
                     <div class="tw-flex tw-flex-col tw-gap-1">
                       <label class="tw-text-sm tw-font-medium tw-text-gray-700">Date de début</label>
-                      <p-datepicker
+                      <p-calendar
                         [formControl]="f['startDate']"
                         dateFormat="dd/mm/yy"
                         placeholder="dd/mm/yyyy"
@@ -253,7 +253,7 @@ import { StudyStatusBadgeComponent } from '../../../shared/components/study-stat
 
                     <div class="tw-flex tw-flex-col tw-gap-1">
                       <label class="tw-text-sm tw-font-medium tw-text-gray-700">Date de fin prévue</label>
-                      <p-datepicker
+                      <p-calendar
                         [formControl]="f['endDate']"
                         dateFormat="dd/mm/yy"
                         placeholder="dd/mm/yyyy"
@@ -302,10 +302,10 @@ import { StudyStatusBadgeComponent } from '../../../shared/components/study-stat
                 </div>
               </div>
             </ng-template>
-          </p-step-panel>
+          </p-stepperPanel>
 
           <!-- ─── Étape 3 : Confirmation ─── -->
-          <p-step-panel header="Confirmation" [value]="2">
+          <p-stepperPanel header="Confirmation">
             <ng-template pTemplate="content" let-prevCallback="prevCallback">
               <div class="tw-pt-4 tw-space-y-6">
 
@@ -421,7 +421,7 @@ import { StudyStatusBadgeComponent } from '../../../shared/components/study-stat
                     (onClick)="prevStep()"
                   />
                   <p-button
-                    [label]="isEditMode() ? 'Enregistrer les modifications' : 'Créer l\'étude'"
+                    [label]="isEditMode() ? 'Enregistrer les modifications' : submitLabel"
                     [icon]="isEditMode() ? 'pi pi-save' : 'pi pi-plus'"
                     [loading]="isSubmitting()"
                     [disabled]="studyForm.invalid"
@@ -431,7 +431,7 @@ import { StudyStatusBadgeComponent } from '../../../shared/components/study-stat
 
               </div>
             </ng-template>
-          </p-step-panel>
+          </p-stepperPanel>
 
         </p-stepper>
       }
@@ -450,6 +450,9 @@ export class StudyFormComponent implements OnInit {
   protected readonly studyTypeOptions   = STUDY_TYPE_OPTIONS;
   protected readonly sponsorTypeOptions = SPONSOR_TYPE_OPTIONS;
   protected readonly studyPhaseOptions  = STUDY_PHASE_OPTIONS;
+
+  /** Label du bouton de soumission (mode création). */
+  protected readonly submitLabel = "Créer l'étude";
 
   // ─── État réactif (signals) ──────────────────────────────────
   /** true si la route contient un paramètre :id (mode EDIT). */
@@ -488,8 +491,8 @@ export class StudyFormComponent implements OnInit {
   });
 
   /** Raccourci vers les contrôles du formulaire. */
-  protected get f(): { [key: string]: AbstractControl } {
-    return this.studyForm.controls;
+  protected get f(): { [key: string]: FormControl } {
+    return this.studyForm.controls as { [key: string]: FormControl };
   }
 
   // ─── Computed labels pour le récapitulatif ──────────────────

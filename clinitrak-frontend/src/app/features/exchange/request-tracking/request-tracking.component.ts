@@ -205,7 +205,7 @@ export class RequestTrackingComponent implements OnInit {
   protected readonly isLoading = signal(false);
 
   /** Sévérité PrimeNG par statut. */
-  protected getStatusSeverity(status: ExchangeStatus): string {
+  protected getStatusSeverity(status: ExchangeStatus): 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined {
     return EXCHANGE_STATUS_SEVERITY[status] ?? 'secondary';
   }
 
@@ -236,7 +236,8 @@ export class RequestTrackingComponent implements OnInit {
    *
    * @param event Événement de sélection PrimeNG
    */
-  protected onRowSelect(event: { data: ExchangeRequest }): void {
+  protected onRowSelect(event: { data?: ExchangeRequest }): void {
+    if (!event.data) return;
     this.selectedRequest.set(event.data);
   }
 

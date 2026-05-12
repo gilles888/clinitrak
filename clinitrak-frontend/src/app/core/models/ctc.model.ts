@@ -259,8 +259,11 @@ export interface StudyTimeline {
 // Severity mappings pour PrimeNG p-tag
 // ─────────────────────────────────────────────────────────────
 
+/** Type sévérité PrimeNG Tag. */
+export type PrimeNGSeverity = 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined;
+
 /** Mapping statut demande → sévérité PrimeNG Tag. */
-export const REQUEST_STATUS_SEVERITY: Record<RequestStatus, string> = {
+export const REQUEST_STATUS_SEVERITY: Record<RequestStatus, PrimeNGSeverity> = {
   [RequestStatus.PENDING]:     'warning',
   [RequestStatus.ASSIGNED]:    'info',
   [RequestStatus.IN_PROGRESS]: 'info',
@@ -269,7 +272,7 @@ export const REQUEST_STATUS_SEVERITY: Record<RequestStatus, string> = {
 };
 
 /** Mapping priorité → sévérité PrimeNG Tag. */
-export const PRIORITY_SEVERITY: Record<Priority, string> = {
+export const PRIORITY_SEVERITY: Record<Priority, PrimeNGSeverity> = {
   [Priority.LOW]:    'secondary',
   [Priority.MEDIUM]: 'info',
   [Priority.HIGH]:   'warning',
@@ -285,7 +288,7 @@ export const SEVERITY_COLOR: Record<Severity, string> = {
 };
 
 /** Mapping statut événement qualité → sévérité PrimeNG Tag. */
-export const EVENT_STATUS_SEVERITY: Record<EventStatus, string> = {
+export const EVENT_STATUS_SEVERITY: Record<EventStatus, PrimeNGSeverity> = {
   [EventStatus.OPEN]:        'danger',
   [EventStatus.IN_PROGRESS]: 'warning',
   [EventStatus.CLOSED]:      'success',
@@ -293,7 +296,7 @@ export const EVENT_STATUS_SEVERITY: Record<EventStatus, string> = {
 };
 
 /** Mapping statut contrat → sévérité PrimeNG Tag. */
-export const CONTRACT_STATUS_SEVERITY: Record<ContractStatus, string> = {
+export const CONTRACT_STATUS_SEVERITY: Record<ContractStatus, PrimeNGSeverity> = {
   [ContractStatus.DRAFT]:     'secondary',
   [ContractStatus.ACTIVE]:    'success',
   [ContractStatus.COMPLETED]: 'info',
@@ -301,7 +304,7 @@ export const CONTRACT_STATUS_SEVERITY: Record<ContractStatus, string> = {
 };
 
 /** Mapping statut réglementaire → sévérité PrimeNG Tag. */
-export const REGULATORY_STATUS_SEVERITY: Record<RegulatoryStatus, string> = {
+export const REGULATORY_STATUS_SEVERITY: Record<RegulatoryStatus, PrimeNGSeverity> = {
   [RegulatoryStatus.IN_PREPARATION]: 'secondary',
   [RegulatoryStatus.SUBMITTED]:      'info',
   [RegulatoryStatus.APPROVED]:       'success',
@@ -310,14 +313,14 @@ export const REGULATORY_STATUS_SEVERITY: Record<RegulatoryStatus, string> = {
 };
 
 /** Mapping statut visite → sévérité PrimeNG Tag. */
-export const VISIT_STATUS_SEVERITY: Record<VisitStatus, string> = {
+export const VISIT_STATUS_SEVERITY: Record<VisitStatus, PrimeNGSeverity> = {
   [VisitStatus.PLANNED]:   'info',
   [VisitStatus.COMPLETED]: 'success',
   [VisitStatus.CANCELLED]: 'secondary',
 };
 
 /** Mapping statut statistique → sévérité PrimeNG Tag. */
-export const STATISTICS_STATUS_SEVERITY: Record<StatisticsStatus, string> = {
+export const STATISTICS_STATUS_SEVERITY: Record<StatisticsStatus, PrimeNGSeverity> = {
   [StatisticsStatus.PENDING]:     'warning',
   [StatisticsStatus.IN_PROGRESS]: 'info',
   [StatisticsStatus.DELIVERED]:   'success',

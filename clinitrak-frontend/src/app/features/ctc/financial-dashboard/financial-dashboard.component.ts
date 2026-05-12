@@ -436,7 +436,7 @@ export class FinancialDashboardComponent implements OnInit {
     const raw = this.createForm.value;
     const payload: Partial<FinancialContract> = {
       studyId:      raw.studyId!,
-      contractType: raw.contractType as ContractType,
+      contractType: (raw.contractType ?? '') as ContractType,
       contractDate: this.formatDate(raw.contractDate as unknown as Date),
       amount:       raw.amount!,
       currency:     raw.currency as Currency,
@@ -462,7 +462,7 @@ export class FinancialDashboardComponent implements OnInit {
    * @param contract contrat financier
    * @returns sévérité PrimeNG
    */
-  protected getContractStatusSeverity(contract: FinancialContract): string {
+  protected getContractStatusSeverity(contract: FinancialContract): 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined {
     return CONTRACT_STATUS_SEVERITY[contract.status] ?? 'info';
   }
 

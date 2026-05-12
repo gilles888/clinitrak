@@ -11,6 +11,78 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ---
 
+## [0.9.1] — 2026-05-12
+
+### Session 10 — Déploiement production effectif + corrections
+
+**Agents impliqués** : backend, devops
+
+#### Corrigé — Conflits de ports
+
+- study-service : port 8082 → **8092** (8082 occupé par arsbotanica sur vmi2936009)
+- ethics-service : port 8083 → **8093** (8083 occupé par CareTrack sur vmi2936009)
+- `gateway/src/main/resources/application.yml` : routes study et ethics mises à jour
+- `ethics-service/src/main/resources/application.yml` : `SERVER_PORT` et `STUDY_SERVICE_URL` mis à jour
+- `ctc-service/src/main/resources/application.yml` : `STUDY_SERVICE_URL` mis à jour (8082 → 8092)
+- `pharmacy-service/src/main/resources/application.yml` : `STUDY_SERVICE_URL` mis à jour
+
+#### Corrigé — Mail health indicator (HTTP 503 en production)
+
+- `ethics-service/src/main/resources/application.yml` : `management.health.mail.enabled: false`
+- `notification-service/src/main/resources/application.yml` : `management.health.mail.enabled: false`
+- Sans SMTP disponible en prod, Spring Boot signalait le service DOWN — corrigé
+
+#### Corrigé — Spring Batch 5.x `@Configuration` obligatoire
+
+- `batch-service/.../WeeklyReportJob.java` : `@Component` → `@Configuration("weeklyReportJobConfiguration")`
+- `batch-service/.../MonthlyBillingJob.java` : `@Component` → `@Configuration("monthlyBillingJobConfiguration")`
+- `@Component` + `@Bean(name=...)` = bean dupliqué → `BeanDefinitionOverrideException`
+
+#### Ajouté — `fix-deploy.sh` (remplace `deploy.sh` pour le bare-metal)
+
+- Variable `COMMON_DB` centralisée : passe `-DDB_HOST -DDB_PORT=5433 -DDB_USER -DDB_USERNAME -DDB_PASSWORD` à chaque service
+- Support `TARGET=<service>` pour déploiement individuel
+- Support `SKIP_FRONTEND=1` / `SKIP_BACKEND=1`
+- Utilise `pg_isready -h localhost -p 5433` pour vérifier PostgreSQL (robuste en contexte sudo)
+- Notification service : variable SMTP (`-DSMTP_HOST`) distincte de `MAIL_HOST`
+
+#### Corrigé — Frontend Angular 20
+
+- `clinitrak-frontend/angular.json` : créé (absent du repo), workspace Angular 20 standard
+- `clinitrak-frontend/package.json` : TypeScript `~5.5.0` → `~5.8.0` (requis par Angular 20)
+- `clinitrak-frontend/package.json` : ajout `@angular/cdk` et `chart.js` (peer deps PrimeNG 17)
+- `clinitrak-frontend/src/styles.css` : déplacement des `@import` avant `@tailwind` (spec CSS)
+- Corrections PrimeNG 17 API dans 12+ composants :
+  - `primeng/textarea` → `primeng/inputtextarea`
+  - `primeng/datepicker` → `primeng/calendar`
+  - `severity="warn"` → `severity="warning"`
+  - Types `severity` : `string` → union type PrimeNG 17
+
+#### Ajouté — Documentation
+
+- `docs/DEPLOYMENT.md` : réécriture complète avec vrais ports, commandes exactes, pièges connus, procédure accès utilisateurs
+- `CLAUDE.md` : correction des ports production (8092/8093)
+
+#### Production — Statut au 2026-05-12
+
+Tous les services déployés et opérationnels sur `clinitrak.gilmotech.be` :
+
+| Service | Port | Statut |
+|---------|------|--------|
+| gateway | 8080 | ✅ UP |
+| auth | 8081 | ✅ UP |
+| study | 8092 | ✅ UP |
+| ethics | 8093 | ✅ UP |
+| ctc | 8084 | ✅ UP |
+| pharmacy | 8085 | ✅ UP |
+| exchange | 8086 | ✅ UP |
+| document | 8088 | ✅ UP |
+| batch | 8089 | ✅ UP |
+| notification | 8090 | ✅ UP |
+| admin | 8091 | ✅ UP |
+
+---
+
 ## [0.9.0] — 2026-05-12
 
 ### Session 9 — Infrastructure de déploiement bare-metal (production)

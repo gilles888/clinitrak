@@ -16,7 +16,7 @@ import { DropdownModule } from 'primeng/dropdown';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableModule } from 'primeng/table';
-import { TextareaModule } from 'primeng/textarea';
+import { InputTextareaModule } from 'primeng/inputtextarea';
 import { PharmacyService } from '../../../core/services/pharmacy.service';
 import { Dispensation, InvestigationalDrug } from '../../../core/models/pharmacy.model';
 
@@ -44,7 +44,7 @@ import { Dispensation, InvestigationalDrug } from '../../../core/models/pharmacy
     InputNumberModule,
     InputTextModule,
     TableModule,
-    TextareaModule,
+    InputTextareaModule,
   ],
   template: `
     <div class="tw-space-y-6">

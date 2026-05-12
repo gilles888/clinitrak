@@ -7,7 +7,7 @@ import { CalendarModule } from 'primeng/calendar';
 import { DialogModule } from 'primeng/dialog';
 import { DropdownModule } from 'primeng/dropdown';
 import { InputTextModule } from 'primeng/inputtext';
-import { TextareaModule } from 'primeng/textarea';
+import { InputTextareaModule } from 'primeng/inputtextarea';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { FullCalendarModule } from '@fullcalendar/angular';
@@ -52,7 +52,7 @@ import {
     DropdownModule,
     FullCalendarModule,
     InputTextModule,
-    TextareaModule,
+    InputTextareaModule,
     ToastModule,
   ],
   providers: [MessageService],
@@ -222,8 +222,8 @@ export class MeetingCalendarComponent implements OnInit {
   protected readonly newMeetingDate = signal<string | null>(null);
 
   /** Données du formulaire de création de réunion. */
-  protected newMeeting: Partial<MeetingCreateRequest> & { meetingDate: Date | null } = {
-    meetingDate: null,
+  protected newMeeting: Partial<MeetingCreateRequest> = {
+    meetingDate: '',
     meetingTime: '',
     meetingType: undefined,
     location: '',
@@ -264,11 +264,7 @@ export class MeetingCalendarComponent implements OnInit {
     dateClick: (info) => {
       this.newMeetingDate.set(info.dateStr);
       const parts = info.dateStr.split('-');
-      this.newMeeting.meetingDate = new Date(
-        Number(parts[0]),
-        Number(parts[1]) - 1,
-        Number(parts[2]),
-      );
+      this.newMeeting.meetingDate = info.dateStr;
       this.showNewMeetingDialog = true;
     },
   }));
@@ -324,7 +320,7 @@ export class MeetingCalendarComponent implements OnInit {
     if (!this.isNewMeetingValid()) return;
 
     const request: MeetingCreateRequest = {
-      meetingDate:  this.isoDate(this.newMeeting.meetingDate as Date),
+      meetingDate:  this.newMeeting.meetingDate!,
       meetingTime:  this.newMeeting.meetingTime || undefined,
       meetingType:  this.newMeeting.meetingType!,
       location:     this.newMeeting.location!,
@@ -363,7 +359,7 @@ export class MeetingCalendarComponent implements OnInit {
   /** Réinitialise le formulaire de création de réunion. */
   private resetNewMeetingForm(): void {
     this.newMeeting = {
-      meetingDate: null,
+      meetingDate: '',
       meetingTime: '',
       meetingType: undefined,
       location: '',

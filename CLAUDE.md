@@ -56,15 +56,15 @@ clinitrak/
 ├── pom.xml                    # Parent : Spring Boot 3.3.4, Java 21
 ├── gateway/                   # Spring Cloud Gateway (port 8080)
 ├── auth-service/              # Auth JWT multi-tenant (port 8081) ← COMPLET
-├── study-service/             # Gestion des études cliniques (port 8082)
-├── ethics-service/            # Comité d'Éthique (port 8083)
-├── ctc-service/               # Centre de Thérapie Cellulaire (port 8084)
+├── study-service/             # Gestion des études cliniques (port 8092) ← COMPLET
+├── ethics-service/            # Comité d'Éthique (port 8093) ← COMPLET
+├── ctc-service/               # Centre de Thérapie Cellulaire (port 8084) ← COMPLET
 ├── pharmacy-service/          # Pharmacie (port 8085) ← COMPLET
 ├── exchange-service/          # Portail échanges externes (port 8086) ← COMPLET
-├── billing-service/           # Facturation (port 8087)
-├── document-service/          # GED MinIO (port 8088)
-├── batch-service/             # Jobs Spring Batch (port 8089)
-├── notification-service/      # Email/SMS (port 8090)
+├── billing-service/           # Facturation (port 8087) — À développer
+├── document-service/          # GED MinIO (port 8088) ← COMPLET
+├── batch-service/             # Jobs Spring Batch (port 8089) ← COMPLET
+├── notification-service/      # Email/SMS (port 8090) ← COMPLET
 └── admin-service/             # Administration (port 8091) ← COMPLET
 ```
 
@@ -152,25 +152,25 @@ Serveur : `45.88.223.242` — Ubuntu, systemd, PostgreSQL 16 port **5433**
 
 ```
 Ports production :
-  8080 → clinitrak-gateway    (systemd)
-  8081 → clinitrak-auth       (systemd)
-  8082 → clinitrak-study      (systemd)
-  8084 → clinitrak-ethics     (systemd)
-  8085 → clinitrak-ctc        (systemd)
-  8086 → clinitrak-pharmacy   (systemd)
-  8087 → clinitrak-exchange   (systemd)
-  8088 → clinitrak-document   (systemd)
-  8089 → clinitrak-batch      (systemd)
-  8090 → clinitrak-notification (systemd)
-  8091 → clinitrak-admin      (systemd)
-  5433 → PostgreSQL 16        (natif, partagé avec CareTrack)
+  8080 → clinitrak-gateway    (systemd) ✅
+  8081 → clinitrak-auth       (systemd) ✅
+  8092 → clinitrak-study      (systemd) ✅  ← port 8082 occupé par arsbotanica
+  8093 → clinitrak-ethics     (systemd) ✅  ← port 8083 occupé par CareTrack
+  8084 → clinitrak-ctc        (systemd) ✅
+  8085 → clinitrak-pharmacy   (systemd) ✅
+  8086 → clinitrak-exchange   (systemd) ✅
+  8088 → clinitrak-document   (systemd) ✅
+  8089 → clinitrak-batch      (systemd) ✅
+  8090 → clinitrak-notification (systemd) ✅
+  8091 → clinitrak-admin      (systemd) ✅
+  5433 → PostgreSQL 16        (natif, partagé avec CareTrack et arsbotanica)
   6379 → Redis 7              (apt, service systemd)
   9000 → MinIO API            (binaire, service systemd)
   9001 → MinIO Console        (binaire, service systemd)
 ```
 
-**Déploiement** : `source .env.prod && sudo -E ./scripts/deploy.sh all`
-**Health check** : `./scripts/check-health.sh`
+**Déploiement** : `sudo bash -c 'set -a && source /home/claude-worker/clinitrak/.env.prod && set +a && bash /home/claude-worker/clinitrak/fix-deploy.sh'`
+**Health check** : `sudo systemctl status 'clinitrak-*' --no-pager | grep Active`
 **Logs** : `tail -f /var/log/clinitrak/<service>.log`
 
 ---

@@ -8,7 +8,7 @@ import { CardModule } from 'primeng/card';
 import { DropdownModule } from 'primeng/dropdown';
 import { InputTextModule } from 'primeng/inputtext';
 import { StepperModule } from 'primeng/stepper';
-import { TextareaModule } from 'primeng/textarea';
+import { InputTextareaModule } from 'primeng/inputtextarea';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { EthicsService } from '../../../core/services/ethics.service';
@@ -45,7 +45,7 @@ import {
     DropdownModule,
     InputTextModule,
     StepperModule,
-    TextareaModule,
+    InputTextareaModule,
     ToastModule,
   ],
   providers: [MessageService],
@@ -191,7 +191,7 @@ import {
         <p-stepper [activeStep]="activeStep()">
 
           <!-- Étape 1 : Identification de l'étude -->
-          <p-step-panel [value]="0" header="Identification de l'étude">
+          <p-stepperPanel header="Identification de l'étude">
             <ng-template pTemplate="content">
               <div class="tw-bg-white tw-rounded-xl tw-border tw-border-gray-200 tw-p-6 tw-space-y-5">
 
@@ -258,10 +258,10 @@ import {
                 </div>
               </div>
             </ng-template>
-          </p-step-panel>
+          </p-stepperPanel>
 
           <!-- Étape 2 : Détails et commentaires -->
-          <p-step-panel [value]="1" header="Détails et commentaires">
+          <p-stepperPanel header="Détails et commentaires">
             <ng-template pTemplate="content">
               <div class="tw-bg-white tw-rounded-xl tw-border tw-border-gray-200 tw-p-6 tw-space-y-5">
 
@@ -328,7 +328,7 @@ import {
                 </div>
               </div>
             </ng-template>
-          </p-step-panel>
+          </p-stepperPanel>
 
         </p-stepper>
       }

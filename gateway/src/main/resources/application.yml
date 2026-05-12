@@ -23,13 +23,13 @@ spring:
 
         # Study Service
         - id: study-service
-          uri: http://${STUDY_SERVICE_HOST:clinitrak-study}:8082
+          uri: http://${STUDY_SERVICE_HOST:localhost}:${STUDY_SERVICE_PORT:8092}
           predicates:
             - Path=/api/v1/studies/**
 
         # Ethics Service
         - id: ethics-service
-          uri: http://${ETHICS_SERVICE_HOST:clinitrak-ethics}:8083
+          uri: http://${ETHICS_SERVICE_HOST:localhost}:${ETHICS_SERVICE_PORT:8093}
           predicates:
             - Path=/api/v1/ethics/**
 

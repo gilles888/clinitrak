@@ -199,10 +199,13 @@ export interface StockImportResult {
 // Mappings de sévérité PrimeNG
 // ─────────────────────────────────────────────────────────────
 
+/** Type sévérité PrimeNG Tag. */
+export type PrimeNGSeverity = 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined;
+
 /**
  * Mapping statut stock → sévérité PrimeNG Tag.
  */
-export const STOCK_STATUS_SEVERITY: Record<StockStatus, string> = {
+export const STOCK_STATUS_SEVERITY: Record<StockStatus, PrimeNGSeverity> = {
   [StockStatus.QUARANTINE]: 'warning',
   [StockStatus.AVAILABLE]:  'success',
   [StockStatus.DISPENSED]:  'info',
@@ -213,7 +216,7 @@ export const STOCK_STATUS_SEVERITY: Record<StockStatus, string> = {
 /**
  * Mapping statut réglementaire → sévérité PrimeNG Tag.
  */
-export const DRUG_REGULATORY_SEVERITY: Record<DrugRegulatoryStatus, string> = {
+export const DRUG_REGULATORY_SEVERITY: Record<DrugRegulatoryStatus, PrimeNGSeverity> = {
   [DrugRegulatoryStatus.PENDING]:  'warning',
   [DrugRegulatoryStatus.APPROVED]: 'success',
   [DrugRegulatoryStatus.EXPIRED]:  'danger',
@@ -223,7 +226,7 @@ export const DRUG_REGULATORY_SEVERITY: Record<DrugRegulatoryStatus, string> = {
 /**
  * Mapping type d'alerte → sévérité PrimeNG Tag.
  */
-export const ALERT_TYPE_SEVERITY: Record<AlertType, string> = {
+export const ALERT_TYPE_SEVERITY: Record<AlertType, PrimeNGSeverity> = {
   [AlertType.LOW_STOCK]:  'warning',
   [AlertType.EXPIRY_30]:  'warning',
   [AlertType.EXPIRY_7]:   'danger',

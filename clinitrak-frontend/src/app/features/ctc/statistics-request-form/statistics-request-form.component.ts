@@ -317,7 +317,7 @@ export class StatisticsRequestFormComponent implements OnInit {
    * @param req demande statistique
    * @returns sévérité PrimeNG
    */
-  protected getStatisticsStatusSeverity(req: StatisticsRequest): string {
+  protected getStatisticsStatusSeverity(req: StatisticsRequest): 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined {
     return STATISTICS_STATUS_SEVERITY[req.status] ?? 'info';
   }
 

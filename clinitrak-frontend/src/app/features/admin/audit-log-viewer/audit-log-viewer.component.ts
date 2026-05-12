@@ -305,7 +305,7 @@ export class AuditLogViewerComponent implements OnInit {
    *
    * @param action Type d'action
    */
-  protected getActionSeverity(action: string): string {
+  protected getActionSeverity(action: string): 'success' | 'info' | 'secondary' | 'contrast' | 'warning' | 'danger' | undefined {
     switch (action) {
       case 'CREATE': return 'success';
       case 'UPDATE': return 'info';
