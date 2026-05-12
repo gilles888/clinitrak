@@ -2,6 +2,8 @@ package be.clinitrak.auth.domain.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -56,6 +58,7 @@ public class AuditLog {
     private String resourceId;
 
     /** Détails supplémentaires en JSON. */
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "details", columnDefinition = "jsonb")
     private String details;
 
