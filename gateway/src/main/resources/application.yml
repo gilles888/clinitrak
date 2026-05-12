@@ -79,7 +79,11 @@ spring:
       globalcors:
         corsConfigurations:
           '[/**]':
-            allowedOrigins: ${CORS_ORIGINS:http://localhost:4200}
+            allowedOriginPatterns:
+              - "https://clinitrak.gilmotech.be"
+              - "http://clinitrak.gilmotech.be"
+              - "http://localhost:4200"
+              - "http://localhost:[*]"
             allowedMethods:
               - GET
               - POST
