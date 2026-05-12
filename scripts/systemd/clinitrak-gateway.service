@@ -1,0 +1,43 @@
+[Unit]
+Description=CliniTrak API Gateway (port 8080)
+After=network.target clinitrak-auth.service redis.service
+Wants=clinitrak-auth.service redis.service
+
+[Service]
+Type=simple
+User=claude-worker
+Group=claude-worker
+
+Environment="JAVA_HOME=/home/claude-worker/tools/jdk-21.0.5+11"
+Environment="PATH=/home/claude-worker/tools/jdk-21.0.5+11/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+ExecStart=/home/claude-worker/tools/jdk-21.0.5+11/bin/java \
+  -XX:+UseContainerSupport \
+  -XX:MaxRAMPercentage=20.0 \
+  -XX:+UseG1GC \
+  -Djava.security.egd=file:/dev/./urandom \
+  -Dspring.profiles.active=prod \
+  -DSERVER_PORT=8080 \
+  -DJWT_SECRET=PLACEHOLDER_JWT_SECRET \
+  -DREDIS_HOST=localhost \
+  -DREDIS_PORT=6379 \
+  -DCORS_ORIGINS=https://clinitrak.gilmotech.be \
+  -DAUTH_SERVICE_URL=http://localhost:8081 \
+  -DSTUDY_SERVICE_URL=http://localhost:8082 \
+  -DETHICS_SERVICE_URL=http://localhost:8084 \
+  -DCTC_SERVICE_URL=http://localhost:8085 \
+  -DPHARMACY_SERVICE_URL=http://localhost:8086 \
+  -DEXCHANGE_SERVICE_URL=http://localhost:8087 \
+  -DDOCUMENT_SERVICE_URL=http://localhost:8088 \
+  -DBATCH_SERVICE_URL=http://localhost:8089 \
+  -DNOTIFICATION_SERVICE_URL=http://localhost:8090 \
+  -DADMIN_SERVICE_URL=http://localhost:8091 \
+  -jar /home/claude-worker/clinitrak/jars/gateway.jar
+
+Restart=always
+RestartSec=15
+StandardOutput=append:/var/log/clinitrak/gateway.log
+StandardError=append:/var/log/clinitrak/gateway.log
+
+[Install]
+WantedBy=multi-user.target

@@ -11,6 +11,82 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ---
 
+## [0.9.0] — 2026-05-12
+
+### Session 9 — Infrastructure de déploiement bare-metal (production)
+
+**Agents impliqués** : devops
+
+#### Ajouté — Scripts de déploiement
+
+- `scripts/setup-server.sh` : initialisation serveur une seule fois (sudo requis)
+  - Installation Redis 7 via apt + activation systemd
+  - Téléchargement et installation du binaire MinIO + service systemd
+  - Création des 10 bases PostgreSQL (port 5433) avec user `clinitrak`
+  - Création des répertoires `/home/claude-worker/clinitrak/jars/` et `/var/log/clinitrak/`
+  - Enregistrement des services systemd CliniTrak
+
+- `scripts/deploy.sh` : déploiement principal (source .env.prod && sudo -E)
+  - Validation des 6 secrets obligatoires avec longueur minimale
+  - Correction des permissions (chown claude-worker) avant chaque build
+  - Build Maven par service (`-pl <module> -am -DskipTests`) + copie JAR vers `jars/`
+  - Installation des fichiers systemd avec substitution des `PLACEHOLDER_*` via `sed`
+  - Redémarrage ordonné des 11 services avec health check 45s
+  - Build Angular avec `--legacy-peer-deps` obligatoire
+  - Synchronisation automatique de la config Nginx
+  - Cibles : `all`, `backend`, `frontend`, ou tout service individuel (`auth`, `gateway`, etc.)
+
+- `scripts/check-health.sh` : monitoring rapide
+  - Actuator `/health` pour les 11 services (ports 8080-8091)
+  - Statut systemd des 11 services
+  - Vérification Redis (`redis-cli ping`), PostgreSQL (`pg_isready -p 5433`), MinIO
+
+#### Ajouté — Fichiers systemd (11 services)
+
+- `scripts/systemd/clinitrak-gateway.service` (port 8080)
+- `scripts/systemd/clinitrak-auth.service` (port 8081)
+- `scripts/systemd/clinitrak-study.service` (port 8082)
+- `scripts/systemd/clinitrak-ethics.service` (port 8084)
+- `scripts/systemd/clinitrak-ctc.service` (port 8085)
+- `scripts/systemd/clinitrak-pharmacy.service` (port 8086)
+- `scripts/systemd/clinitrak-exchange.service` (port 8087)
+- `scripts/systemd/clinitrak-document.service` (port 8088)
+- `scripts/systemd/clinitrak-batch.service` (port 8089)
+- `scripts/systemd/clinitrak-notification.service` (port 8090)
+- `scripts/systemd/clinitrak-admin.service` (port 8091)
+
+  Tous : `User=claude-worker`, `MaxRAMPercentage=20.0`, `Restart=always`, `RestartSec=15`,
+  logs vers `/var/log/clinitrak/<service>.log`, valeurs sensibles en `PLACEHOLDER_*`.
+
+#### Ajouté — Config Nginx
+
+- `scripts/nginx/clinitrak.gilmotech.be` : vhost complet
+  - Redirect HTTP → HTTPS
+  - SSL TLS 1.2/1.3 (Let's Encrypt)
+  - Proxy `/api/` → gateway port 8080 avec support SSE (buffering off)
+  - Proxy `/swagger-ui/` et `/v3/api-docs`
+  - Proxy `/minio/` → console MinIO port 9001
+  - SPA fallback `try_files $uri $uri/ /index.html`
+  - Headers de sécurité (X-Frame-Options, X-Content-Type-Options, etc.)
+  - Gzip
+
+#### Ajouté — Template secrets
+
+- `.env.prod` : template de production (hors git — ajouté au `.gitignore`)
+
+#### Modifié
+
+- `.gitignore` : ajout de `.env.prod` et `*.env.prod.local`
+- `docs/DEPLOYMENT.md` : réécriture complète en mode bare-metal
+  - Tableau de mapping services/ports/bases/fichiers systemd
+  - Procédure en 4 étapes (setup, nginx+ssl, premier déploiement, déploiements partiels)
+  - Variables obligatoires avec commandes de génération
+  - Gestion systemd, ordre de démarrage des dépendances
+  - Pièges spécifiques bare-metal (placeholder Spring, permissions root, npm legacy-peer-deps)
+  - Section troubleshooting complète
+
+---
+
 ## [0.8.1] — 2026-05-12
 
 ### Session 7 (suite) — Corrections d'intégration frontend/backend

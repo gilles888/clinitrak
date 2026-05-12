@@ -9,326 +9,340 @@
 | IP publique IPv6 | `2a02:c207:2293:6009::1` |
 | OS | Ubuntu 22.04 (systemd) |
 | Utilisateur applicatif | `claude-worker` |
-| Domaine | `clinitrak.gilmotech.be` (à configurer) |
+| Domaine | `clinitrak.gilmotech.be` |
 
-### Outils disponibles sur le serveur
-
-```
-/home/claude-worker/tools/
-├── jdk-21.0.5+11/          # Java 21 (JAVA_HOME à pointer ici)
-├── apache-maven-3.9.6/     # Maven 3.9
-└── ...
-```
-
-- **Node.js** : v20.20.1 (npm 10.8.2)
-- **nginx** + **certbot** : installés système
-- **Docker** + **Docker Compose** : à vérifier / installer si absent
-
-### PostgreSQL
-
-CliniTrak utilise PostgreSQL 16 via Docker Compose (conteneur `postgres`). Si PostgreSQL tourne déjà nativement sur le serveur (port 5433 pour CareTrack), le conteneur Docker sera sur le port **5434** pour éviter le conflit :
-
-```yaml
-# Dans docker-compose.yml, modifier le mapping de port si nécessaire :
-ports:
-  - "5434:5432"   # Si le port 5432 est déjà occupé
-```
-
-### DNS (à configurer)
+### DNS
 
 ```
 clinitrak.gilmotech.be    A     45.88.223.242
 clinitrak.gilmotech.be    AAAA  2a02:c207:2293:6009::1
 ```
 
+### Outils disponibles sur le serveur
+
+```
+/home/claude-worker/tools/
+├── jdk-21.0.5+11/          # Java 21 (JAVA_HOME à pointer ici)
+└── apache-maven-3.9.6/     # Maven 3.9
+```
+
+- **Node.js** : v20.20.1 (npm 10.8.2)
+- **nginx** + **certbot** : installés système
+- **PostgreSQL 16** : port **5433** (non-standard — partagé avec CareTrack)
+- **Redis 7** : installé par `setup-server.sh`
+- **MinIO** : binaire téléchargé par `setup-server.sh`
+
 ---
 
-## Déploiement via Docker Compose (recommandé)
+## Déploiement bare-metal (production)
 
-### 1. Cloner le dépôt
+CliniTrak est déployé en **bare-metal** sur `vmi2936009` : chaque service Spring Boot tourne comme un service systemd indépendant. Il n'y a pas de Docker en production.
+
+### Mapping des services
+
+| Service | Port | Base de données | Fichier systemd |
+|---------|------|----------------|-----------------|
+| gateway | 8080 | — | clinitrak-gateway.service |
+| auth-service | 8081 | clinitrak_auth | clinitrak-auth.service |
+| study-service | 8082 | clinitrak_study | clinitrak-study.service |
+| ethics-service | 8084 | clinitrak_ethics | clinitrak-ethics.service |
+| ctc-service | 8085 | clinitrak_ctc | clinitrak-ctc.service |
+| pharmacy-service | 8086 | clinitrak_pharmacy | clinitrak-pharmacy.service |
+| exchange-service | 8087 | clinitrak_exchange | clinitrak-exchange.service |
+| document-service | 8088 | clinitrak_document | clinitrak-document.service |
+| batch-service | 8089 | clinitrak_batch | clinitrak-batch.service |
+| notification-service | 8090 | clinitrak_notification | clinitrak-notification.service |
+| admin-service | 8091 | clinitrak_admin | clinitrak-admin.service |
+
+---
+
+### 1. Initialisation serveur (une seule fois)
 
 ```bash
 cd /home/claude-worker/clinitrak
-git pull origin main
-```
 
-### 2. Créer le fichier .env.prod
-
-```bash
-cp .env.example .env.prod
+# Créer et remplir les secrets
+cp .env.prod.example .env.prod   # ou copier depuis le gestionnaire de mots de passe
 chmod 600 .env.prod
-# Éditer et renseigner toutes les valeurs obligatoires
-nano .env.prod
+nano .env.prod   # Renseigner TOUTES les valeurs obligatoires
+
+# Lancer le setup (installe Redis, MinIO, crée les bases PostgreSQL)
+source .env.prod
+sudo -E DB_PASSWORD="$DB_PASSWORD" \
+        MINIO_ACCESS_KEY="$MINIO_ACCESS_KEY" \
+        MINIO_SECRET_KEY="$MINIO_SECRET_KEY" \
+        ./scripts/setup-server.sh
 ```
 
-### 3. Build et démarrage
+### 2. Configuration Nginx + SSL
 
 ```bash
-# Build de toutes les images
-docker compose --env-file .env.prod build --no-cache
-
-# Démarrage (infrastructure d'abord)
-docker compose --env-file .env.prod up -d postgres redis minio mailhog
-
-# Attendre que postgres soit healthy (30s)
-docker compose ps postgres
-
-# Démarrer les services backend
-docker compose --env-file .env.prod up -d \
-  clinitrak-auth clinitrak-study clinitrak-ethics \
-  clinitrak-ctc clinitrak-pharmacy clinitrak-exchange \
-  clinitrak-notification clinitrak-document \
-  clinitrak-batch clinitrak-admin
-
-# Démarrer la gateway
-docker compose --env-file .env.prod up -d clinitrak-gateway
-```
-
-### 4. Nginx (reverse proxy)
-
-Créer `/etc/nginx/sites-available/clinitrak.gilmotech.be` :
-
-```nginx
-server {
-    listen 80;
-    server_name clinitrak.gilmotech.be;
-    return 301 https://$host$request_uri;
-}
-
-server {
-    listen 443 ssl;
-    server_name clinitrak.gilmotech.be;
-
-    ssl_certificate     /etc/letsencrypt/live/clinitrak.gilmotech.be/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/clinitrak.gilmotech.be/privkey.pem;
-
-    root /home/claude-worker/clinitrak/clinitrak-frontend/dist/clinitrak-frontend/browser;
-    index index.html;
-
-    # API → Gateway Docker
-    location /api/ {
-        proxy_pass http://localhost:8080;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        # SSE : désactiver le buffering
-        proxy_buffering off;
-        proxy_cache off;
-        chunked_transfer_encoding on;
-    }
-
-    # SPA Angular
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-}
-```
-
-```bash
+# Copier la config nginx
+sudo cp scripts/nginx/clinitrak.gilmotech.be /etc/nginx/sites-available/
 sudo ln -s /etc/nginx/sites-available/clinitrak.gilmotech.be \
-           /etc/nginx/sites-enabled/
+           /etc/nginx/sites-enabled/clinitrak.gilmotech.be
+
+# Vérifier et recharger
 sudo nginx -t
 sudo systemctl reload nginx
+
+# Obtenir le certificat SSL (DNS doit pointer vers le serveur)
+sudo certbot --nginx -d clinitrak.gilmotech.be \
+     --email gilmoreau73@gmail.com --agree-tos --non-interactive
 ```
 
-### 5. SSL Let's Encrypt
+### 3. Premier déploiement complet
 
 ```bash
-sudo certbot --nginx -d clinitrak.gilmotech.be --email gilmoreau73@gmail.com
+# Commande de référence (déploiement complet)
+source .env.prod && sudo -E ./scripts/deploy.sh all
 ```
 
-### 6. Build frontend Angular (production)
+Le script `deploy.sh` effectue dans l'ordre :
+1. Valide les variables obligatoires
+2. Corrige les permissions (`chown claude-worker`)
+3. Build Maven de chaque service (`-DskipTests`)
+4. Copie les JARs dans `/home/claude-worker/clinitrak/jars/`
+5. Installe les fichiers systemd avec les vraies valeurs (substitution des PLACEHOLDER)
+6. Démarre chaque service dans l'ordre des dépendances
+7. Build Angular (`npm install --legacy-peer-deps && npm run build --configuration production`)
+8. Met à jour la config Nginx si modifiée
+
+### 4. Déploiements partiels
 
 ```bash
-cd /home/claude-worker/clinitrak/clinitrak-frontend
-npm install --legacy-peer-deps   # --legacy-peer-deps obligatoire (Angular 20 peer deps)
-npm run build -- --configuration production
+# Backend uniquement (tous les services Java)
+source .env.prod && sudo -E ./scripts/deploy.sh backend
+
+# Frontend uniquement (Angular)
+source .env.prod && sudo -E ./scripts/deploy.sh frontend
+
+# Un seul service (ex : auth après un hotfix)
+source .env.prod && sudo -E ./scripts/deploy.sh auth
+source .env.prod && sudo -E ./scripts/deploy.sh gateway
 ```
 
-> **Note** : `npm ci` peut échouer sur les peer deps Angular 20. Toujours utiliser `npm install --legacy-peer-deps`.
+### 5. Vérification de santé
+
+```bash
+./scripts/check-health.sh
+```
 
 ---
-
-## Pièges connus (leçons du projet CareTrack)
-
-## Prérequis
-
-| Composant | Version minimale | Notes |
-|-----------|-----------------|-------|
-| Java (JRE) | 21 | Eclipse Temurin recommandé |
-| Docker | 24.x | Pour déploiement conteneurisé |
-| Docker Compose | 2.x | Plugin Docker (pas standalone) |
-| PostgreSQL | 16 | Alpine accepté |
-| Redis | 7 | Mode standalone ou Sentinel |
-| MinIO | RELEASE.2024+ | Compatible API S3 |
 
 ## Variables d'environnement obligatoires en production
 
-Les variables suivantes n'ont **pas** de valeur par défaut acceptable en production. Elles doivent être définies explicitement dans un fichier `.env` ou via les secrets de l'orchestrateur (Kubernetes, Vault, etc.).
+| Variable | Description | Génération |
+|----------|-------------|------------|
+| `DB_PASSWORD` | Mot de passe PostgreSQL user `clinitrak` | `openssl rand -base64 24` |
+| `JWT_SECRET` | Secret HMAC-SHA256 (min 32 chars), partagé par tous les services | `openssl rand -base64 64` |
+| `EXCHANGE_JWT_SECRET` | JWT distinct pour le portail externe | `openssl rand -base64 64` |
+| `PHARMACY_ENCRYPTION_KEY` | Clé AES-256 (32 chars hex) pour chiffrement Pharmacie | `openssl rand -hex 16` |
+| `MINIO_ACCESS_KEY` | Access key MinIO | ex: `clinitrak_minio` |
+| `MINIO_SECRET_KEY` | Secret key MinIO | `openssl rand -base64 24` |
 
-```bash
-# Sécurité — OBLIGATOIRES
-JWT_SECRET=<base64 64 octets — générer avec : openssl rand -base64 64>
-EXCHANGE_JWT_SECRET=<base64 64 octets — clé distincte de JWT_SECRET>
-PHARMACY_ENCRYPTION_KEY=<32 caractères hex — AES-256>
-
-# Base de données
-DB_USER=<utilisateur PostgreSQL non-root>
-DB_PASSWORD=<mot de passe fort>
-
-# Redis
-REDIS_PASSWORD=<mot de passe Redis>
-
-# MinIO
-MINIO_ACCESS_KEY=<access key MinIO>
-MINIO_SECRET_KEY=<secret key MinIO>
-
-# Mail (SMTP réel en production)
-MAIL_HOST=<serveur SMTP>
-MAIL_PORT=587
-MAIL_USERNAME=<compte SMTP>
-MAIL_PASSWORD=<mot de passe SMTP>
-
-# Domaine
-CLINITRAK_ROOT_DOMAIN=clinitrak.be
-CORS_ORIGINS=https://app.clinitrak.be
-```
-
-## Procédure de démarrage (ordre des services)
-
-Le démarrage doit respecter l'ordre de dépendance suivant. Avec Docker Compose, les `depends_on` avec `condition: service_healthy` gèrent cet ordre automatiquement.
-
-### Ordre recommandé
-
-```
-1. postgres          — Base de données principale
-2. redis             — Cache et sessions
-3. minio             — Stockage objet
-4. mailhog           — (dev uniquement, remplacer par SMTP réel en prod)
-5. clinitrak-auth    — Authentification (dépend de postgres + redis)
-6. clinitrak-study   — Études (dépend de auth)
-7. clinitrak-ethics  — CE (dépend de study)
-8. clinitrak-ctc     — CTC (dépend de study)
-9. clinitrak-pharmacy — Pharmacie (dépend de study)
-10. clinitrak-exchange — Portail externe (dépend de postgres)
-11. clinitrak-notification — Notifications (dépend de postgres + mailhog/SMTP)
-12. clinitrak-document — GED (dépend de postgres + minio)
-13. clinitrak-batch   — Jobs batch (dépend de notification + pharmacy)
-14. clinitrak-admin   — Administration (dépend de postgres)
-15. clinitrak-gateway — Passerelle API (dépend de auth)
-```
-
-### Commandes de démarrage
-
-```bash
-# Démarrage complet (production)
-docker compose -f docker-compose.yml up -d
-
-# Démarrage partiel (infrastructure seule, pour déploiements progressifs)
-docker compose up -d postgres redis minio
-docker compose up -d clinitrak-auth clinitrak-study
-# ... etc.
-
-# Vérification du statut
-docker compose ps
-```
-
-## Health checks
-
-Chaque service expose un endpoint `/actuator/health` (services Spring Boot) ou `/api/v1/auth/health` (auth-service).
-
-```bash
-# Vérifier tous les health checks
-for port in 8081 8082 8083 8084 8085 8086 8088 8089 8090 8091; do
-  echo -n "Port $port : "
-  curl -sf http://localhost:$port/actuator/health | jq -r .status 2>/dev/null || echo "KO"
-done
-
-# Gateway
-curl -sf http://localhost:8080/actuator/health | jq .
-```
-
-## Migrations Liquibase
-
-Les migrations Liquibase s'exécutent **automatiquement au démarrage** de chaque service via Spring Boot. Elles sont idempotentes.
-
-Pour vérifier l'état des migrations sans démarrer le service :
-
-```bash
-cd <service>/
-mvn liquibase:status -Dspring.profiles.active=prod \
-  -Dspring.datasource.url=jdbc:postgresql://<host>:5432/<db> \
-  -Dspring.datasource.username=<user> \
-  -Dspring.datasource.password=<pass>
-```
-
-## Pièges connus (leçons du projet CareTrack)
-
-### Ne pas utiliser `${VAR:-default}` dans les paramètres `-D` systemd/JVM
-
-Spring Boot 3.3+ interprète ce pattern comme un placeholder Spring et génère une référence circulaire. Toujours écrire la valeur résolue.
-
-### Health check trop court
-
-Spring Boot prend ~25-40s à démarrer selon les ressources. Ajuster `start_period` dans les healthchecks Docker si les services sont marqués "unhealthy" trop tôt.
-
-### Permissions root sur target/
-
-Si Maven tourne en `sudo`, les fichiers `target/` sont `root:root`. Corriger avec :
-```bash
-sudo chown -R claude-worker:claude-worker /home/claude-worker/clinitrak
-```
-
-### Générer JWT_SECRET une seule fois
-
-```bash
-openssl rand -base64 64
-```
-Changer ce secret invalide tous les tokens JWT actifs (déconnexion forcée de tous les utilisateurs).
+> Conserver `JWT_SECRET` identique entre les déploiements. Le changer invalide tous les tokens actifs.
 
 ---
 
-## Troubleshooting courant
-
-### Service ne démarre pas (OOMKilled)
-
-Augmenter la RAM allouée au conteneur. Les services Spring Boot nécessitent au minimum 512 Mo. La JVM utilise `MaxRAMPercentage=75.0` — avec 512 Mo conteneur, le heap max sera ~384 Mo.
-
-```yaml
-# docker-compose.yml
-deploy:
-  resources:
-    limits:
-      memory: 768m
-```
-
-### Erreur "Connection refused" sur postgres
-
-Vérifier que le healthcheck postgres est green avant le démarrage des services. Le `pg_isready` peut répondre avant que PostgreSQL soit prêt à accepter des connexions authentifiées.
+## Gestion des services systemd
 
 ```bash
-docker compose logs postgres | tail -20
-docker compose exec postgres pg_isready -U clinitrak
+# Statut d'un service
+sudo systemctl status clinitrak-auth
+
+# Redémarrage manuel
+sudo systemctl restart clinitrak-auth
+
+# Logs en temps réel (systemd journal)
+journalctl -u clinitrak-auth -f
+
+# Logs applicatifs (fichier)
+tail -f /var/log/clinitrak/auth-service.log
+tail -f /var/log/clinitrak/gateway.log
+
+# Après modification manuelle d'un .service dans /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl restart clinitrak-<service>
+
+# Désactiver un service
+sudo systemctl disable clinitrak-batch
+sudo systemctl stop clinitrak-batch
 ```
 
-### Liquibase : "Table already exists"
+### Ordre de démarrage des dépendances
 
-Ne jamais modifier les migrations existantes. Si une table doit changer, créer une nouvelle migration `V{n+1}__description.sql`.
+```
+redis.service         (Redis 7)
+minio.service         (MinIO)
+                ↓
+clinitrak-auth        (authentification)
+                ↓
+clinitrak-study       (études — Feign vers auth)
+                ↓
+clinitrak-ethics      (Feign vers study)
+clinitrak-ctc         (Feign vers study)
+clinitrak-pharmacy    (Feign vers study)
+                ↓
+clinitrak-exchange    (JWT distinct — indépendant)
+clinitrak-document    (MinIO — indépendant)
+clinitrak-notification (SMTP — indépendant)
+clinitrak-admin        (indépendant)
+                ↓
+clinitrak-batch       (Feign vers notification + pharmacy)
+                ↓
+clinitrak-gateway     (proxy vers tous les services)
+```
+
+---
+
+## Procédure de mise à jour habituelle
+
+```bash
+# 1. Mettre à jour le code
+cd /home/claude-worker/clinitrak
+git pull origin main
+
+# 2. Déployer
+source .env.prod && sudo -E ./scripts/deploy.sh all
+
+# 3. Vérifier
+./scripts/check-health.sh
+```
+
+---
+
+## Infrastructure complémentaire (bare-metal)
+
+### Redis
+
+```bash
+# Statut
+sudo systemctl status redis-server
+
+# Vérifier connexion
+redis-cli ping   # → PONG
+
+# Logs
+journalctl -u redis-server -n 50
+```
+
+### MinIO
+
+```bash
+# Statut
+sudo systemctl status minio
+
+# Console web
+# http://localhost:9001  (ou https://clinitrak.gilmotech.be/minio/)
+
+# Logs
+tail -f /var/log/clinitrak/minio.log
+```
+
+### PostgreSQL (port 5433)
+
+```bash
+# Connexion directe
+psql -h localhost -p 5433 -U clinitrak -d clinitrak_auth
+
+# Via superutilisateur
+sudo -u postgres psql -p 5433
+
+# Vérifier les connexions actives
+sudo -u postgres psql -p 5433 -c "SELECT datname, count(*) FROM pg_stat_activity GROUP BY datname;"
+```
+
+---
+
+## Migrations Liquibase
+
+Les migrations s'exécutent **automatiquement au démarrage** de chaque service. Elles sont idempotentes.
+
+Pour vérifier l'état sans démarrer le service :
+
+```bash
+cd /home/claude-worker/clinitrak/auth-service
+export JAVA_HOME=/home/claude-worker/tools/jdk-21.0.5+11
+export PATH=$JAVA_HOME/bin:$PATH
+/home/claude-worker/tools/apache-maven-3.9.6/bin/mvn liquibase:status \
+    -Dspring.profiles.active=prod \
+    -DDB_URL=jdbc:postgresql://localhost:5433/clinitrak_auth \
+    -DDB_USER=clinitrak \
+    -DDB_PASSWORD="$DB_PASSWORD"
+```
+
+---
+
+## Pièges connus (leçons CareTrack et CliniTrak)
+
+### Ne pas utiliser `${VAR:-default}` dans les `-D` systemd
+
+Spring Boot 3.3+ interprète ce pattern comme un placeholder Spring et génère une `PlaceholderResolutionException`. Les fichiers `.service` dans `scripts/systemd/` utilisent des valeurs `PLACEHOLDER_*` que `deploy.sh` remplace via `sed`. Ne jamais écrire les vraies valeurs dans ces fichiers versionnés.
+
+### Permissions root sur `target/` et les JARs
+
+Si Maven tourne en `sudo`, les fichiers `target/` appartiennent à `root`. `deploy.sh` corrige automatiquement avec `chown -R claude-worker` avant chaque build.
+
+### Health check trop court
+
+Spring Boot prend ~25-40s à démarrer sur ce serveur. `HEALTH_WAIT=45` dans `deploy.sh`.
+
+### `npm install` : toujours `--legacy-peer-deps`
+
+Angular 20 a des conflits de peer deps. `npm ci` échoue. Toujours utiliser `npm install --legacy-peer-deps`.
+
+### PostgreSQL sur le port 5433
+
+Partagé avec CareTrack. Ne jamais modifier ce port. Le port standard 5432 est réservé ou non utilisé.
+
+### MaxRAMPercentage à 20% par service
+
+11 services Java + Redis + MinIO = charge importante. Avec 20% par service, le heap max de chaque JVM est ~20% de la RAM totale de la machine. Sur un serveur à 4 Go RAM, c'est ~800 Mo par JVM — suffisant pour Spring Boot, à ajuster si OOMKilled.
+
+---
+
+## Troubleshooting
+
+### Service ne démarre pas
+
+```bash
+# Vérifier les logs systemd
+journalctl -u clinitrak-auth --no-pager -n 50
+
+# Vérifier les logs applicatifs
+tail -50 /var/log/clinitrak/auth-service.log
+
+# Vérifier que le JAR est bien là
+ls -lh /home/claude-worker/clinitrak/jars/
+```
+
+### OOMKilled (manque de mémoire)
+
+Réduire `MaxRAMPercentage` dans le fichier `.service` (ex: 15%) ou désactiver les services non utilisés (`systemctl stop clinitrak-batch`).
+
+### Erreur de connexion PostgreSQL
+
+```bash
+# Vérifier que PostgreSQL écoute sur 5433
+ss -tlnp | grep 5433
+
+# Tester la connexion
+psql -h localhost -p 5433 -U clinitrak -d clinitrak_auth -c "SELECT 1;"
+```
 
 ### JWT invalide entre services
 
-Tous les services partagent le même `JWT_SECRET`. Vérifier que la variable est identique dans tous les conteneurs.
+Vérifier que `JWT_SECRET` est identique dans tous les fichiers `.service` installés :
 
 ```bash
-docker compose exec clinitrak-auth env | grep JWT_SECRET
-docker compose exec clinitrak-study env | grep JWT_SECRET
+grep JWT_SECRET /etc/systemd/system/clinitrak-*.service
 ```
 
 ### MinIO inaccessible depuis document-service
 
-Vérifier que `MINIO_ENDPOINT` pointe vers le nom du service Docker (`http://minio:9000`) et non `localhost`.
+Sur bare-metal, l'endpoint est `http://localhost:9000` (pas `http://minio:9000` comme en Docker).
 
-### MailHog vs SMTP production
+### Liquibase : "Table already exists"
 
-En développement, `MAIL_HOST=mailhog` (port 1025) intercepte tous les emails. En production, remplacer par le vrai serveur SMTP et supprimer le service mailhog du compose.
+Ne jamais modifier les migrations existantes. Créer `V{n+1}__description.sql`.

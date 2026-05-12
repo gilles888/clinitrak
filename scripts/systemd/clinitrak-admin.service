@@ -1,0 +1,35 @@
+[Unit]
+Description=CliniTrak Admin Service (port 8091)
+After=network.target
+
+[Service]
+Type=simple
+User=claude-worker
+Group=claude-worker
+
+Environment="JAVA_HOME=/home/claude-worker/tools/jdk-21.0.5+11"
+Environment="PATH=/home/claude-worker/tools/jdk-21.0.5+11/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+ExecStart=/home/claude-worker/tools/jdk-21.0.5+11/bin/java \
+  -XX:+UseContainerSupport \
+  -XX:MaxRAMPercentage=20.0 \
+  -XX:+UseG1GC \
+  -Djava.security.egd=file:/dev/./urandom \
+  -Dspring.profiles.active=prod \
+  -DSERVER_PORT=8091 \
+  -DDB_URL=jdbc:postgresql://localhost:5433/clinitrak_admin \
+  -DDB_USER=clinitrak \
+  -DDB_PASSWORD=PLACEHOLDER_DB_PASSWORD \
+  -DJWT_SECRET=PLACEHOLDER_JWT_SECRET \
+  -DREDIS_HOST=localhost \
+  -DREDIS_PORT=6379 \
+  -DCORS_ORIGINS=https://clinitrak.gilmotech.be \
+  -jar /home/claude-worker/clinitrak/jars/admin-service.jar
+
+Restart=always
+RestartSec=15
+StandardOutput=append:/var/log/clinitrak/admin-service.log
+StandardError=append:/var/log/clinitrak/admin-service.log
+
+[Install]
+WantedBy=multi-user.target

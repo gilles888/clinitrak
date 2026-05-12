@@ -4,7 +4,9 @@
 
 # Secrets — NE JAMAIS committer !
 .env
+.env.prod
 *.env.local
+*.env.prod.local
 *.pem
 *.key
 

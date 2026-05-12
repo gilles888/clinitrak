@@ -125,7 +125,7 @@ clinitrak-frontend/src/app/
 - **AuditAspect** : trace automatiquement tous les appels @RestController (async)
 - **Lockout** : 5 tentatives → verrouillage 30min
 
-### Infrastructure (dev)
+### Infrastructure (dev — Docker Compose)
 
 ```yaml
 Services Docker Compose :
@@ -145,6 +145,33 @@ Services Docker Compose :
   clinitrak-admin    : Admin Service (port 8091) ✅ Complet
   clinitrak-gateway : API Gateway (port 8080) ✅ Complet
 ```
+
+### Infrastructure (production — bare-metal vmi2936009)
+
+Serveur : `45.88.223.242` — Ubuntu, systemd, PostgreSQL 16 port **5433**
+
+```
+Ports production :
+  8080 → clinitrak-gateway    (systemd)
+  8081 → clinitrak-auth       (systemd)
+  8082 → clinitrak-study      (systemd)
+  8084 → clinitrak-ethics     (systemd)
+  8085 → clinitrak-ctc        (systemd)
+  8086 → clinitrak-pharmacy   (systemd)
+  8087 → clinitrak-exchange   (systemd)
+  8088 → clinitrak-document   (systemd)
+  8089 → clinitrak-batch      (systemd)
+  8090 → clinitrak-notification (systemd)
+  8091 → clinitrak-admin      (systemd)
+  5433 → PostgreSQL 16        (natif, partagé avec CareTrack)
+  6379 → Redis 7              (apt, service systemd)
+  9000 → MinIO API            (binaire, service systemd)
+  9001 → MinIO Console        (binaire, service systemd)
+```
+
+**Déploiement** : `source .env.prod && sudo -E ./scripts/deploy.sh all`
+**Health check** : `./scripts/check-health.sh`
+**Logs** : `tail -f /var/log/clinitrak/<service>.log`
 
 ---
 
@@ -190,6 +217,13 @@ Services Docker Compose :
   - `docs/ADR/ADR-001-multi-tenant.md` : décision RLS applicatif
   - `docs/ADR/ADR-002-jwt-exchange.md` : décision JWT distinct externe
   - `docs/ADR/ADR-003-minio-storage.md` : décision MinIO vs filesystem
+- [x] **Infrastructure bare-metal production** (vmi2936009 — session 9) :
+  - `scripts/setup-server.sh` : initialisation Redis, MinIO, PostgreSQL, systemd
+  - `scripts/deploy.sh` : déploiement multi-services avec substitution secrets
+  - `scripts/check-health.sh` : monitoring des 11 services + infra
+  - `scripts/systemd/clinitrak-*.service` : 11 fichiers systemd avec PLACEHOLDER_*
+  - `scripts/nginx/clinitrak.gilmotech.be` : vhost Nginx complet (SSL, SPA, SSE, MinIO)
+  - `.env.prod` : template secrets production (hors git)
 
 ### À développer (par priorité)
 
