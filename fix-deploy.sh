@@ -173,7 +173,10 @@ COMMON_DB="-DDB_HOST=localhost \
   -Dspring.datasource.hikari.maximum-pool-size=5 \
   -Dspring.datasource.hikari.minimum-idle=1 \
   -Dspring.datasource.hikari.connection-timeout=20000 \
-  -Dspring.datasource.hikari.idle-timeout=300000"
+  -Dspring.datasource.hikari.idle-timeout=300000 \
+  -Dclinitrak.cors.allowed-origins=http://clinitrak.gilmotech.be,https://clinitrak.gilmotech.be,http://localhost:4200 \
+  -DCORS_ORIGINS=http://clinitrak.gilmotech.be,https://clinitrak.gilmotech.be,http://localhost:4200 \
+  -DCORS_ORIGIN_1=http://clinitrak.gilmotech.be"
 
 # gateway — pas de DB, rate limiting Redis
 # 127.0.0.1 au lieu de localhost/noms Docker pour éviter SERVFAIL Netty DNS
