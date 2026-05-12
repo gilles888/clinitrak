@@ -55,7 +55,7 @@ public class ExternalUser extends BaseEntity {
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
-    /** Date et heure de création du compte. */
+    /** Date et heure de création du compte (colonne locale, distinct de BaseEntity.createdAt). */
     @Column(name = "created_at_local")
-    private LocalDateTime createdAt;
+    private LocalDateTime createdAtLocal;
 }

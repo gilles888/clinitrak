@@ -79,7 +79,7 @@ public class AdminTenantService {
             ? request.subscriptionType()
             : SubscriptionType.BASIC);
         tenant.setStatus(TenantStatus.ACTIVE);
-        tenant.setCreatedAt(LocalDateTime.now());
+        tenant.setCreatedAtLocal(LocalDateTime.now());
 
         Set<ModuleType> modules = (request.activeModules() != null && !request.activeModules().isEmpty())
             ? request.activeModules()
@@ -238,7 +238,7 @@ public class AdminTenantService {
             tenant.getSubscriptionType().getLabel(),
             tenant.getStatus(),
             tenant.getStatus().getLabel(),
-            tenant.getCreatedAt()
+            tenant.getCreatedAtLocal()
         );
     }
 

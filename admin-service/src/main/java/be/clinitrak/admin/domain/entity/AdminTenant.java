@@ -69,7 +69,7 @@ public class AdminTenant extends BaseEntity {
     @Column(name = "status", nullable = false, length = 50)
     private TenantStatus status = TenantStatus.ACTIVE;
 
-    /** Date de création du tenant. */
+    /** Date de création du tenant (colonne locale, distinct de BaseEntity.createdAt). */
     @Column(name = "created_at_local")
-    private LocalDateTime createdAt;
+    private LocalDateTime createdAtLocal;
 }

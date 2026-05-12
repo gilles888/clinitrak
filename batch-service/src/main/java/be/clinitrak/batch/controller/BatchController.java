@@ -90,7 +90,7 @@ public class BatchController {
                     execution.getId(),
                     execution.getStatus().name(),
                     execution.getStartTime() != null
-                            ? execution.getStartTime().toLocalDateTime() : LocalDateTime.now(),
+                            ? execution.getStartTime() : LocalDateTime.now(),
                     "Job déclenché avec succès"));
 
         } catch (Exception ex) {
@@ -122,9 +122,9 @@ public class BatchController {
                             jobName,
                             execution.getStatus().name(),
                             execution.getStartTime() != null
-                                    ? execution.getStartTime().toLocalDateTime() : null,
+                                    ? execution.getStartTime() : null,
                             execution.getEndTime() != null
-                                    ? execution.getEndTime().toLocalDateTime() : null,
+                                    ? execution.getEndTime() : null,
                             execution.getExitStatus().getExitCode(),
                             execution.getExitStatus().getExitDescription()));
                 }

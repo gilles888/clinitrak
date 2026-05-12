@@ -59,7 +59,7 @@ public class ExternalUserService {
         user.setPasswordHash(hashedPassword);
         user.setVerifiedEmail(false);
         user.setEmailVerificationToken(verificationToken);
-        user.setCreatedAt(LocalDateTime.now());
+        user.setCreatedAtLocal(LocalDateTime.now());
 
         ExternalUser saved = externalUserRepository.save(user);
 
@@ -138,7 +138,9 @@ public class ExternalUserService {
             user.getRole(),
             user.getRole().getLabel(),
             user.isVerifiedEmail(),
-            user.getCreatedAt()
+            user.getCreatedAt() != null
+                ? java.time.LocalDateTime.ofInstant(user.getCreatedAt(), java.time.ZoneId.systemDefault())
+                : null
         );
     }
 }
