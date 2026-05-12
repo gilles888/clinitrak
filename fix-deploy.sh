@@ -176,9 +176,22 @@ COMMON_DB="-DDB_HOST=localhost \
   -Dspring.datasource.hikari.idle-timeout=300000"
 
 # gateway — pas de DB, rate limiting Redis
+# 127.0.0.1 au lieu de localhost/noms Docker pour éviter SERVFAIL Netty DNS
 write_service "gateway" "8080" "" \
-  "-DREDIS_HOST=localhost \
-  -DREDIS_PORT=6379"
+  "-DREDIS_HOST=127.0.0.1 \
+  -DREDIS_PORT=6379 \
+  -DAUTH_SERVICE_HOST=127.0.0.1 \
+  -DSTUDY_SERVICE_HOST=127.0.0.1 \
+  -DSTUDY_SERVICE_PORT=8092 \
+  -DETHICS_SERVICE_HOST=127.0.0.1 \
+  -DETHICS_SERVICE_PORT=8093 \
+  -DCTC_SERVICE_HOST=127.0.0.1 \
+  -DPHARMACY_SERVICE_HOST=127.0.0.1 \
+  -DEXCHANGE_SERVICE_HOST=127.0.0.1 \
+  -DDOCUMENT_SERVICE_HOST=127.0.0.1 \
+  -DNOTIFICATION_SERVICE_HOST=127.0.0.1 \
+  -DBATCH_SERVICE_HOST=127.0.0.1 \
+  -DADMIN_SERVICE_HOST=127.0.0.1"
 
 # auth-service — DB_NAME + DB_USER (pas DB_USERNAME)
 write_service "auth" "8081" "clinitrak_auth" \
