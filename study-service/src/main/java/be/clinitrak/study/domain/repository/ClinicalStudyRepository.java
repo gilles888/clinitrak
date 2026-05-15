@@ -104,6 +104,6 @@ public interface ClinicalStudyRepository extends JpaRepository<ClinicalStudy, UU
      * @return nombre d'études créées cette année pour ce tenant
      */
     @Query("SELECT COUNT(c) FROM ClinicalStudy c " +
-           "WHERE c.tenantId = :tenantId AND FUNCTION('YEAR', c.createdAt) = :year")
+           "WHERE c.tenantId = :tenantId AND EXTRACT(YEAR FROM c.createdAt) = :year")
     long countByTenantIdAndYear(@Param("tenantId") UUID tenantId, @Param("year") int year);
 }
