@@ -97,6 +97,29 @@ import { authError, isLoading } from '../../../core/store/auth.store';
               }
             </div>
 
+            <!-- Code établissement -->
+            <div class="tw-flex tw-flex-col tw-gap-1.5">
+              <label for="tenantCode" class="tw-text-sm tw-font-medium tw-text-gray-700">
+                Code établissement
+              </label>
+              <input
+                pInputText
+                id="tenantCode"
+                type="text"
+                formControlName="tenantCode"
+                placeholder="saintluc"
+                [class.ng-dirty]="loginForm.controls.tenantCode.dirty"
+                class="tw-w-full"
+                autocomplete="organization"
+              />
+              @if (loginForm.controls.tenantCode.dirty && loginForm.controls.tenantCode.errors?.['required']) {
+                <small class="tw-text-red-500">Le code établissement est obligatoire</small>
+              }
+              @if (loginForm.controls.tenantCode.dirty && loginForm.controls.tenantCode.errors?.['minlength']) {
+                <small class="tw-text-red-500">Le code établissement doit comporter au moins 2 caractères</small>
+              }
+            </div>
+
             <!-- Lien mot de passe oublié -->
             <div class="tw-flex tw-justify-end">
               <a
@@ -137,15 +160,18 @@ export class LoginComponent {
   protected readonly authError = authError;
 
   protected readonly loginForm = this.fb.group({
-    email:    ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(8)]],
+    email:      ['', [Validators.required, Validators.email]],
+    password:   ['', [Validators.required, Validators.minLength(8)]],
+    tenantCode: ['', [Validators.required, Validators.minLength(2)]],
   });
 
   /** Soumet le formulaire de login. */
   protected onSubmit(): void {
     if (this.loginForm.invalid) return;
 
-    const { email, password } = this.loginForm.value;
+    const { email, password, tenantCode } = this.loginForm.value;
+
+    localStorage.setItem('ct_tenant_override', tenantCode!.toLowerCase().trim());
 
     this.authService.login({ email: email!, password: password! }).subscribe({
       next: () => {

@@ -3,7 +3,7 @@
  */
 export const environment = {
   production: true,
-  apiBaseUrl: 'https://api.clinitrak.be',
+  apiBaseUrl: '/api',
   notificationStreamUrl: '/api/v1/notifications/stream',
   tenantId: '',
   appVersion: '1.0.0',
