@@ -4,6 +4,7 @@
 #                          + création des données de démo ONCO-2026-01
 #
 # Usage (sur le serveur) :
+#   sudo -u claude-worker git -C /home/claude-worker/clinitrak pull origin main && \
 #   sudo bash -c 'set -a && source /home/claude-worker/clinitrak/.env.prod && set +a && \
 #                 bash /home/claude-worker/clinitrak/scripts/redeploy-tenant-fix.sh'
 # =============================================================================
@@ -26,6 +27,7 @@ fi
 log_step "Git pull"
 
 cd "${BASE_DIR}"
+# git doit s'exécuter en claude-worker (root est refusé sur un dossier tiers)
 sudo -u claude-worker git pull origin main
 log_ok "Code à jour"
 
