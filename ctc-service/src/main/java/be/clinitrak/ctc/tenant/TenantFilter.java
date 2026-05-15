@@ -13,18 +13,20 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.UUID;
 
 /**
  * Filtre de résolution du tenant courant pour le ctc-service.
  *
  * <p>Stratégie de résolution (par ordre de priorité) :
  * <ol>
- *   <li>Header {@code X-Tenant-ID} (slug ou UUID du tenant)</li>
+ *   <li>UUID déjà positionné par {@code JwtAuthenticationFilter} (Spring Security) — priorité absolue</li>
+ *   <li>Header {@code X-Tenant-ID} (slug du tenant)</li>
  *   <li>Sous-domaine de l'Host (ex: {@code saintluc.clinitrak.be} → slug "saintluc")</li>
  * </ol>
  *
  * <p>Le tenant résolu est stocké dans le {@link TenantContext} pour la durée de la requête.
- * Le JWT Authentication Filter viendra ensuite l'enrichir avec l'UUID issu du token.
+ * Si Spring Security a déjà résolu l'UUID tenant depuis le JWT, ce filtre ne l'écrase pas.
  */
 @Slf4j
 @Component
@@ -53,13 +55,19 @@ public class TenantFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
 
         try {
-            String tenantSlug = resolveSlug(request);
-
-            if (StringUtils.hasText(tenantSlug)) {
-                log.debug("Tenant résolu via filtre : {} pour {}", tenantSlug, request.getRequestURI());
-                TenantContext.setTenantId(tenantSlug);
+            // Spring Security's JwtAuthenticationFilter (runs before this servlet filter) may have
+            // already set a valid UUID tenant in TenantContext. Do not overwrite it with the slug.
+            if (!isValidUuid(TenantContext.getTenantId())) {
+                String tenantSlug = resolveSlug(request);
+                if (StringUtils.hasText(tenantSlug)) {
+                    log.debug("Tenant résolu via filtre : {} pour {}", tenantSlug, request.getRequestURI());
+                    TenantContext.setTenantId(tenantSlug);
+                } else {
+                    log.debug("Aucun tenant résolu par TenantFilter pour : {}", request.getRequestURI());
+                }
             } else {
-                log.debug("Aucun tenant résolu par TenantFilter pour : {}", request.getRequestURI());
+                log.debug("Tenant UUID déjà positionné par JwtAuthenticationFilter : {} pour {}",
+                    TenantContext.getTenantId(), request.getRequestURI());
             }
 
             filterChain.doFilter(request, response);
@@ -83,5 +91,15 @@ public class TenantFilter extends OncePerRequestFilter {
 
         // 2. Sous-domaine de l'Host
         return tenantResolver.resolveFromHost(request.getServerName());
+    }
+
+    private boolean isValidUuid(String value) {
+        if (value == null || value.isBlank()) return false;
+        try {
+            UUID.fromString(value);
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 }
