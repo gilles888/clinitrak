@@ -77,6 +77,20 @@ server {
     }
 
     # ── SPA Angular — fallback index.html pour le routing côté client ─────────
+    # index.html n'est jamais mis en cache : garantit que les nouveaux déploiements
+    # sont immédiatement visibles et évite que le navigateur fasse des appels API
+    # en HTTP depuis une ancienne page en cache (cause de redirections 301 + CORS).
+    location = /index.html {
+        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate" always;
+        add_header Pragma        "no-cache"                                              always;
+        add_header Expires       "0"                                                     always;
+        # Réappliquer les headers de sécurité (remplacés par le bloc local)
+        add_header X-Frame-Options           "SAMEORIGIN"                          always;
+        add_header X-Content-Type-Options    "nosniff"                             always;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        try_files $uri /index.html;
+    }
+
     location / {
         try_files $uri $uri/ /index.html;
     }
