@@ -1,0 +1,776 @@
+// ─── Tokens de design (alignés avec login.component.scss) ────────────────────
+$primary:        #1565c0;
+$primary-dark:   #0d47a1;
+$primary-light:  #1e88e5;
+$primary-glow:   rgba(21, 101, 192, 0.25);
+$success:        #22c55e;
+$error:          #ef4444;
+$warning:        #f59e0b;
+$info:           #3b82f6;
+$text:           #0f172a;
+$text-muted:     #64748b;
+$border:         #e2e8f0;
+$surface:        #ffffff;
+$bg:             #f8fafc;
+
+$radius-sm:  0.5rem;
+$radius-md:  0.75rem;
+$radius-lg:  1rem;
+$radius-xl:  1.25rem;
+
+$shadow-sm:  0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+$shadow-md:  0 4px 12px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04);
+$shadow-lg:  0 8px 24px rgba(0,0,0,0.10), 0 4px 8px rgba(0,0,0,0.06);
+
+$transition: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+
+// ─── Racine du dashboard ──────────────────────────────────────────────────────
+.db-root {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  padding: 2rem 2.5rem;
+  min-height: 100%;
+  background: $bg;
+
+  @media (max-width: 768px) {
+    padding: 1.25rem 1rem;
+    gap: 1.25rem;
+  }
+}
+
+// ─── Header ──────────────────────────────────────────────────────────────────
+.db-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.db-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.db-greeting {
+  font-size: 1.625rem;
+  font-weight: 800;
+  color: $text;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+.db-greeting-text {
+  color: $text;
+}
+
+.db-greeting-name {
+  color: $primary;
+}
+
+.db-subtitle {
+  font-size: 0.875rem;
+  color: $text-muted;
+  margin: 0;
+}
+
+.db-date {
+  color: #94a3b8;
+}
+
+// Bouton "Rechercher" (inactif)
+.search-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: $surface;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  color: $text-muted;
+  font-size: 0.875rem;
+  cursor: pointer;
+  box-shadow: $shadow-sm;
+  transition: border-color $transition, box-shadow $transition;
+
+  &:hover {
+    border-color: $primary;
+    box-shadow: 0 0 0 3px $primary-glow;
+    color: $primary;
+  }
+
+  kbd {
+    font-family: inherit;
+    font-size: 0.7rem;
+    padding: 0.15rem 0.4rem;
+    border: 1px solid $border;
+    border-radius: 0.25rem;
+    background: #f1f5f9;
+    color: $text-muted;
+  }
+}
+
+// Barre de recherche active
+.global-search-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 28rem;
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
+}
+
+.search-icon-left {
+  position: absolute;
+  left: 0.875rem;
+  color: $text-muted;
+  pointer-events: none;
+  font-size: 0.875rem;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.625rem 2.75rem 0.625rem 2.5rem;
+  border: 1.5px solid $primary;
+  border-radius: $radius-md;
+  font-size: 0.875rem;
+  color: $text;
+  background: $surface;
+  box-shadow: 0 0 0 4px $primary-glow;
+  outline: none;
+  transition: box-shadow $transition;
+
+  &::placeholder {
+    color: #94a3b8;
+  }
+}
+
+.search-close {
+  position: absolute;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  color: $text-muted;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  transition: color $transition;
+
+  &:hover { color: $text; }
+}
+
+// ─── Bandeau alertes ─────────────────────────────────────────────────────────
+.alerts-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-left: 4px solid $warning;
+  border-radius: $radius-md;
+  flex-wrap: wrap;
+}
+
+.alerts-icon {
+  color: $warning;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.alerts-text {
+  font-size: 0.875rem;
+  color: #92400e;
+  flex: 1;
+}
+
+.alerts-link {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: $warning;
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover { text-decoration: underline; }
+}
+
+// ─── Grille KPI ──────────────────────────────────────────────────────────────
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.kpi-card {
+  background: $surface;
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  padding: 1.25rem 1.375rem;
+  box-shadow: $shadow-sm;
+  transition: transform $transition, box-shadow $transition;
+  cursor: default;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: $shadow-lg;
+  }
+}
+
+.kpi-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.kpi-content {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.kpi-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.kpi-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: $text-muted;
+  margin: 0;
+}
+
+.kpi-value {
+  font-size: 2.375rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.kpi-trend {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin: 0.25rem 0 0;
+
+  i { font-size: 0.7rem; }
+
+  &--up      { color: $success; }
+  &--neutral { color: $text-muted; }
+  &--danger  { color: $error; }
+}
+
+.kpi-icon-box {
+  width: 3rem;
+  height: 3rem;
+  border-radius: $radius-md;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  i { font-size: 1.375rem; }
+}
+
+.kpi-sub {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin: 0.75rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid $border;
+}
+
+// ─── Grille principale (modules + widgets) ───────────────────────────────────
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 22rem;
+  gap: 1.5rem;
+  align-items: start;
+
+  @media (max-width: 1100px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// ─── Section modules ─────────────────────────────────────────────────────────
+.modules-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: $text;
+  margin: 0;
+
+  i { color: $primary; font-size: 0.9rem; }
+}
+
+.section-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: $text-muted;
+  background: #f1f5f9;
+  border: 1px solid $border;
+  border-radius: 999px;
+  padding: 0.2rem 0.625rem;
+}
+
+// Grille des cards modules
+.module-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.module-card-skeleton {
+  border-radius: $radius-lg;
+  overflow: hidden;
+}
+
+// Card module
+.module-card {
+  background: $surface;
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  box-shadow: $shadow-sm;
+  transition: transform $transition, box-shadow $transition, border-color $transition;
+  text-decoration: none;
+
+  &:hover,
+  &--active {
+    transform: translateY(-3px);
+    box-shadow: $shadow-lg;
+    border-color: rgba(0,0,0,0.12);
+  }
+}
+
+// En-tête coloré de la card module
+.module-card-header {
+  padding: 1rem 1rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.module-card-icon-wrap {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: $radius-md;
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  i { font-size: 1.25rem; }
+}
+
+:host ::ng-deep .module-badge {
+  font-size: 0.65rem !important;
+  padding: 0.2rem 0.5rem !important;
+}
+
+// Corps de la card module
+.module-card-body {
+  padding: 0.875rem 1rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.module-card-title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: $text;
+  margin: 0;
+}
+
+.module-card-subtitle {
+  font-size: 0.78rem;
+  color: $text-muted;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.module-card-trend {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin: 0.375rem 0 0;
+
+  i { font-size: 0.7rem; }
+
+  &.trend-up      { color: $success; }
+  &.trend-neutral { color: $text-muted; }
+}
+
+// Pied de la card module (actions rapides)
+.module-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.625rem 0.875rem;
+  background: #f8fafc;
+  border-top: 1px solid $border;
+}
+
+.module-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.875rem;
+  height: 1.875rem;
+  border-radius: $radius-sm;
+  border: 1px solid $border;
+  background: $surface;
+  color: $text-muted;
+  text-decoration: none;
+  transition: color $transition, border-color $transition, background $transition;
+  flex-shrink: 0;
+
+  i { font-size: 0.8rem; }
+
+  &:hover {
+    color: $primary;
+    border-color: $primary;
+    background: rgba($primary, 0.04);
+  }
+}
+
+.module-card-arrow {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transition: opacity $transition, transform $transition;
+
+  i { font-size: 0.8rem; }
+}
+
+.module-card:hover .module-card-arrow {
+  opacity: 1;
+  transform: translateX(2px);
+}
+
+// ─── Colonne widgets ─────────────────────────────────────────────────────────
+.widgets-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+// Widget générique
+.widget {
+  background: $surface;
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  overflow: hidden;
+  box-shadow: $shadow-sm;
+
+  // Glassmorphism léger (même esprit que le login)
+  backdrop-filter: blur(2px);
+}
+
+.widget-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1.125rem;
+  border-bottom: 1px solid $border;
+  background: #f8fafc;
+}
+
+.widget-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.widget-title-icon {
+  font-size: 0.9rem;
+}
+
+.widget-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: $text;
+  margin: 0;
+}
+
+.widget-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 999px;
+  background: $warning;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.widget-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2rem 1rem;
+  color: $text-muted;
+  font-size: 0.875rem;
+}
+
+.widget-empty-icon {
+  font-size: 2rem;
+}
+
+// ─── Widget tâches urgentes ───────────────────────────────────────────────────
+.urgent-tasks-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.urgent-task-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 1.125rem;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: background $transition;
+
+  &:last-child { border-bottom: none; }
+
+  &:hover { background: #f8fafc; }
+}
+
+.task-module-icon {
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-sm;
+  background: #f1f5f9;
+  flex-shrink: 0;
+
+  i { font-size: 0.875rem; }
+}
+
+.task-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: $text;
+  margin: 0 0 0.2rem;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.72rem;
+  color: $text-muted;
+  margin: 0;
+}
+
+.task-module {
+  font-weight: 500;
+}
+
+.task-separator {
+  color: #cbd5e1;
+}
+
+.task-deadline {
+  font-weight: 600;
+
+  &.deadline-overdue  { color: $error; }
+  &.deadline-critical { color: $error; }
+  &.deadline-warning  { color: $warning; }
+  &.deadline-ok       { color: $text-muted; }
+}
+
+// Pastille de priorité
+.task-priority-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 0.3rem;
+
+  &.priority-high   { background: $error; }
+  &.priority-medium { background: $warning; }
+  &.priority-low    { background: $info; }
+}
+
+// ─── Widget timeline ──────────────────────────────────────────────────────────
+.timeline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.75rem 1.125rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.timeline-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  cursor: pointer;
+  border-radius: $radius-sm;
+  transition: background $transition;
+
+  &:hover {
+    background: #f8fafc;
+    margin: 0 -0.5rem;
+    padding: 0.5rem 0.5rem;
+  }
+}
+
+.timeline-line-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 1.5rem;
+}
+
+.timeline-dot {
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: $shadow-sm;
+}
+
+.timeline-connector {
+  width: 2px;
+  flex: 1;
+  min-height: 1rem;
+  background: linear-gradient(to bottom, $border, transparent);
+  margin: 0.2rem 0;
+}
+
+.timeline-content {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 0.625rem;
+}
+
+.timeline-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: $text;
+  margin: 0 0 0.2rem;
+  line-height: 1.35;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.timeline-urgent-chip {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: $error;
+  background: rgba($error, 0.1);
+  border: 1px solid rgba($error, 0.25);
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+  white-space: nowrap;
+}
+
+.timeline-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.72rem;
+  color: $text-muted;
+  margin: 0;
+}
+
+.timeline-module {
+  font-weight: 500;
+}
+
+.timeline-date {
+  color: $text-muted;
+
+  &--urgent { color: $error; font-weight: 600; }
+}
+
+// ─── Scrollbar personnalisée (widgets) ───────────────────────────────────────
+.urgent-tasks-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.urgent-tasks-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.urgent-tasks-list::-webkit-scrollbar-thumb {
+  background: $border;
+  border-radius: 2px;
+
+  &:hover { background: #cbd5e1; }
+}

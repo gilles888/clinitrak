@@ -4,15 +4,17 @@ import { Router } from '@angular/router';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { ButtonModule } from 'primeng/button';
-import { MessageModule } from 'primeng/message';
+import { CheckboxModule } from 'primeng/checkbox';
+import { RippleModule } from 'primeng/ripple';
 import { AuthService } from '../../../core/services/auth.service';
 import { authError, isLoading } from '../../../core/store/auth.store';
+import { loginAnimations } from './login.animations';
 
 /**
- * Page de login CliniTrak.
+ * Page de connexion CliniTrak.
  *
- * <p>Utilise PrimeNG 17 pour les champs de formulaire et les messages d'erreur.
- * L'état de chargement est géré via les signals du store d'auth.
+ * <p>Design split-screen avec panneau de branding à gauche et formulaire à droite.
+ * Gère les états loading, erreur serveur, validation temps réel et succès animé.
  */
 @Component({
   selector: 'app-login',
@@ -22,128 +24,54 @@ import { authError, isLoading } from '../../../core/store/auth.store';
     InputTextModule,
     PasswordModule,
     ButtonModule,
-    MessageModule,
+    CheckboxModule,
+    RippleModule,
   ],
-  template: `
-    <div class="tw-min-h-screen tw-bg-gradient-to-br tw-from-slate-900 tw-to-blue-900
-                tw-flex tw-items-center tw-justify-center tw-p-4">
-
-      <div class="tw-w-full tw-max-w-md">
-
-        <!-- Card login -->
-        <div class="tw-bg-white tw-rounded-2xl tw-shadow-2xl tw-p-8">
-
-          <!-- Logo + Titre -->
-          <div class="tw-text-center tw-mb-8">
-            <div class="tw-text-5xl tw-mb-3">🏥</div>
-            <h1 class="tw-text-2xl tw-font-bold tw-text-gray-900">CliniTrak</h1>
-            <p class="tw-text-sm tw-text-gray-500 tw-mt-1">
-              Gestion de la recherche clinique
-            </p>
-          </div>
-
-          <!-- Erreur globale -->
-          @if (authError()) {
-            <p-message
-              severity="error"
-              [text]="authError()!"
-              styleClass="tw-w-full tw-mb-4"
-            />
-          }
-
-          <!-- Formulaire -->
-          <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="tw-space-y-5">
-
-            <!-- Email -->
-            <div class="tw-flex tw-flex-col tw-gap-1.5">
-              <label for="email" class="tw-text-sm tw-font-medium tw-text-gray-700">
-                Adresse email
-              </label>
-              <input
-                pInputText
-                id="email"
-                type="email"
-                formControlName="email"
-                placeholder="vous@institution.be"
-                [class.ng-dirty]="loginForm.controls.email.dirty"
-                class="tw-w-full"
-                autocomplete="email"
-              />
-              @if (loginForm.controls.email.dirty && loginForm.controls.email.errors?.['required']) {
-                <small class="tw-text-red-500">L'email est obligatoire</small>
-              }
-              @if (loginForm.controls.email.dirty && loginForm.controls.email.errors?.['email']) {
-                <small class="tw-text-red-500">Format d'email invalide</small>
-              }
-            </div>
-
-            <!-- Mot de passe -->
-            <div class="tw-flex tw-flex-col tw-gap-1.5">
-              <label for="password" class="tw-text-sm tw-font-medium tw-text-gray-700">
-                Mot de passe
-              </label>
-              <p-password
-                inputId="password"
-                formControlName="password"
-                [feedback]="false"
-                [toggleMask]="true"
-                placeholder="••••••••"
-                styleClass="tw-w-full"
-                inputStyleClass="tw-w-full"
-                autocomplete="current-password"
-              />
-              @if (loginForm.controls.password.dirty && loginForm.controls.password.errors?.['required']) {
-                <small class="tw-text-red-500">Le mot de passe est obligatoire</small>
-              }
-            </div>
-
-            <!-- Lien mot de passe oublié -->
-            <div class="tw-flex tw-justify-end">
-              <a
-                href="#"
-                class="tw-text-sm tw-text-blue-600 hover:tw-text-blue-800 hover:tw-underline"
-              >
-                Mot de passe oublié ?
-              </a>
-            </div>
-
-            <!-- Bouton submit -->
-            <p-button
-              type="submit"
-              label="Se connecter"
-              icon="pi pi-sign-in"
-              styleClass="tw-w-full"
-              [loading]="isLoading()"
-              [disabled]="loginForm.invalid || isLoading()"
-            />
-          </form>
-
-          <!-- Footer -->
-          <p class="tw-text-center tw-text-xs tw-text-gray-400 tw-mt-6">
-            CliniTrak v1.0.0 — Cliniques Universitaires Saint-Luc
-          </p>
-        </div>
-      </div>
-    </div>
-  `,
+  templateUrl: './login.component.html',
+  styleUrl: './login.component.scss',
+  animations: loginAnimations,
 })
 export class LoginComponent {
 
   private readonly authService = inject(AuthService);
-  private readonly router = inject(Router);
-  private readonly fb = inject(FormBuilder);
+  private readonly router      = inject(Router);
+  private readonly fb          = inject(FormBuilder);
 
-  protected readonly isLoading = isLoading;
-  protected readonly authError = authError;
+  protected readonly isLoading    = isLoading;
+  protected readonly authError    = authError;
+  protected readonly loginSuccess = signal(false);
+  protected readonly shakeState   = signal<'idle' | 'active'>('idle');
 
   protected readonly loginForm = this.fb.group({
-    email:    ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(8)]],
+    email:      ['', [Validators.required, Validators.email]],
+    password:   ['', [Validators.required, Validators.minLength(8)]],
+    rememberMe: [false],
   });
 
-  /** Soumet le formulaire de login. */
+  protected get emailCtrl()    { return this.loginForm.controls.email; }
+  protected get passwordCtrl() { return this.loginForm.controls.password; }
+
+  /** Classe CSS dynamique pour l'input mot de passe (validation colorée). */
+  protected get passwordInputClass(): string {
+    const base = 'tw-w-full';
+    if (this.passwordCtrl.valid && this.passwordCtrl.dirty)       return `${base} ct-input-valid`;
+    if (this.passwordCtrl.invalid && this.passwordCtrl.touched)   return `${base} ct-input-error`;
+    return base;
+  }
+
+  /** Déclenche l'animation shake sur le conteneur du formulaire. */
+  private triggerShake(): void {
+    this.shakeState.set('active');
+    setTimeout(() => this.shakeState.set('idle'), 600);
+  }
+
+  /** Soumet le formulaire de connexion. */
   protected onSubmit(): void {
-    if (this.loginForm.invalid) return;
+    if (this.loginForm.invalid) {
+      this.loginForm.markAllAsTouched();
+      this.triggerShake();
+      return;
+    }
 
     const { email, password } = this.loginForm.value;
 
@@ -154,9 +82,13 @@ export class LoginComponent {
 
     this.authService.login({ email: email!, password: password! }).subscribe({
       next: () => {
-        const returnUrl = new URLSearchParams(window.location.search).get('returnUrl') ?? '/dashboard';
-        this.router.navigateByUrl(returnUrl);
+        this.loginSuccess.set(true);
+        setTimeout(() => {
+          const returnUrl = new URLSearchParams(window.location.search).get('returnUrl') ?? '/dashboard';
+          this.router.navigateByUrl(returnUrl);
+        }, 900);
       },
+      error: () => this.triggerShake(),
     });
   }
 }

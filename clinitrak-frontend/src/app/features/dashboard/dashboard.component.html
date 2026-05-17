@@ -1,0 +1,359 @@
+<div class="db-root">
+
+  <!-- ═══════════════════════════════════════════════════════
+       HEADER — Salutation + recherche globale
+  ═══════════════════════════════════════════════════════ -->
+  <div class="db-header">
+    <div class="db-header-left">
+      <div class="db-greeting">
+        <span class="db-greeting-text">{{ greeting() }},&nbsp;</span>
+        <span class="db-greeting-name">{{ currentUser()?.firstName ?? 'Utilisateur' }}</span>
+      </div>
+      <p class="db-subtitle">
+        Plateforme de recherche clinique · {{ currentUser()?.tenantId ?? '' }}
+        <span class="db-date">— {{ today | date:'d MMMM yyyy' }}</span>
+      </p>
+    </div>
+    <div class="db-header-right">
+      @if (showGlobalSearch()) {
+        <div class="global-search-bar">
+          <i class="pi pi-search search-icon-left"></i>
+          <input
+            class="search-input"
+            type="text"
+            placeholder="Rechercher un module, une étude, un patient..."
+            [value]="searchQuery()"
+            (input)="onSearchInput($event)"
+            autofocus
+          />
+          <button class="search-close" (click)="closeSearch()">
+            <i class="pi pi-times"></i>
+          </button>
+        </div>
+      } @else {
+        <button class="search-trigger" (click)="showGlobalSearch.set(true)" pRipple>
+          <i class="pi pi-search"></i>
+          <span>Rechercher</span>
+          <kbd>Ctrl K</kbd>
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       BANDEAU ALERTES — visible si tâches urgentes
+  ═══════════════════════════════════════════════════════ -->
+  @if (!isLoading() && urgentTasksCount() > 0) {
+    <div class="alerts-banner">
+      <i class="pi pi-exclamation-triangle alerts-icon"></i>
+      <span class="alerts-text">
+        <strong>{{ urgentTasksCount() }} tâche{{ urgentTasksCount() > 1 ? 's' : '' }}</strong>
+        nécessite{{ urgentTasksCount() > 1 ? 'nt' : '' }} votre attention dans les 7 prochains jours.
+      </span>
+      <a class="alerts-link" routerLink="/studies">Voir les tâches</a>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════
+       GRILLE KPI — 4 métriques principales
+  ═══════════════════════════════════════════════════════ -->
+  <div class="kpi-grid">
+
+    <!-- KPI : Études actives -->
+    <div class="kpi-card">
+      @if (isLoading()) {
+        <div class="kpi-skeleton">
+          <p-skeleton height="2.5rem" width="5rem" styleClass="tw-mb-2" />
+          <p-skeleton height="1rem" width="8rem" />
+        </div>
+      } @else {
+        <div class="kpi-content">
+          <div class="kpi-body">
+            <p class="kpi-label">Études actives</p>
+            <p class="kpi-value" style="color: #1565c0">{{ animatedStudies() }}</p>
+            <p class="kpi-trend kpi-trend--up">
+              <i class="pi pi-arrow-up"></i>
+              +{{ studyStats()?.trend ?? 0 }}% ce mois
+            </p>
+          </div>
+          <div class="kpi-icon-box" style="background: #1565c020">
+            <i class="pi pi-book" style="color: #1565c0"></i>
+          </div>
+        </div>
+        <p class="kpi-sub">{{ studyStats()?.total ?? 0 }} études au total</p>
+      }
+    </div>
+
+    <!-- KPI : Soumissions CE en attente -->
+    <div class="kpi-card">
+      @if (isLoading()) {
+        <div class="kpi-skeleton">
+          <p-skeleton height="2.5rem" width="4rem" styleClass="tw-mb-2" />
+          <p-skeleton height="1rem" width="9rem" />
+        </div>
+      } @else {
+        <div class="kpi-content">
+          <div class="kpi-body">
+            <p class="kpi-label">Soumissions CE en attente</p>
+            <p class="kpi-value" style="color: #8b5cf6">{{ animatedPending() }}</p>
+            <p class="kpi-trend kpi-trend--neutral">
+              <i class="pi pi-clock"></i>
+              {{ dashboardStats()?.ethicsStats?.urgentDeadlines ?? 0 }} deadline{{ (dashboardStats()?.ethicsStats?.urgentDeadlines ?? 0) > 1 ? 's' : '' }} urgente{{ (dashboardStats()?.ethicsStats?.urgentDeadlines ?? 0) > 1 ? 's' : '' }}
+            </p>
+          </div>
+          <div class="kpi-icon-box" style="background: #8b5cf620">
+            <i class="pi pi-shield" style="color: #8b5cf6"></i>
+          </div>
+        </div>
+        <p class="kpi-sub">Délai moyen {{ dashboardStats()?.ethicsStats?.averageProcessingDays ?? 0 }} jours</p>
+      }
+    </div>
+
+    <!-- KPI : Dossiers CTC actifs -->
+    <div class="kpi-card">
+      @if (isLoading()) {
+        <div class="kpi-skeleton">
+          <p-skeleton height="2.5rem" width="4rem" styleClass="tw-mb-2" />
+          <p-skeleton height="1rem" width="7rem" />
+        </div>
+      } @else {
+        <div class="kpi-content">
+          <div class="kpi-body">
+            <p class="kpi-label">Dossiers CTC actifs</p>
+            <p class="kpi-value" style="color: #f59e0b">{{ animatedCtcDossiers() }}</p>
+            <p class="kpi-trend kpi-trend--neutral">
+              <i class="pi pi-spin pi-spinner" style="font-size: 0.75rem"></i>
+              {{ dashboardStats()?.ctcStats?.pendingManufacturing ?? 0 }} fabrication{{ (dashboardStats()?.ctcStats?.pendingManufacturing ?? 0) > 1 ? 's' : '' }} en attente
+            </p>
+          </div>
+          <div class="kpi-icon-box" style="background: #f59e0b20">
+            <i class="pi pi-sitemap" style="color: #f59e0b"></i>
+          </div>
+        </div>
+        <p class="kpi-sub">Thérapies cellulaires</p>
+      }
+    </div>
+
+    <!-- KPI : Dispensations du jour -->
+    <div class="kpi-card">
+      @if (isLoading()) {
+        <div class="kpi-skeleton">
+          <p-skeleton height="2.5rem" width="4rem" styleClass="tw-mb-2" />
+          <p-skeleton height="1rem" width="7rem" />
+        </div>
+      } @else {
+        <div class="kpi-content">
+          <div class="kpi-body">
+            <p class="kpi-label">Dispensations aujourd'hui</p>
+            <p class="kpi-value" style="color: #10b981">{{ animatedDispToday() }}</p>
+            <p class="kpi-trend"
+              [class.kpi-trend--danger]="(dashboardStats()?.pharmacyStats?.criticalStock ?? 0) > 0"
+              [class.kpi-trend--up]="(dashboardStats()?.pharmacyStats?.criticalStock ?? 0) === 0">
+              <i class="pi" [class.pi-exclamation-circle]="(dashboardStats()?.pharmacyStats?.criticalStock ?? 0) > 0"
+                            [class.pi-check-circle]="(dashboardStats()?.pharmacyStats?.criticalStock ?? 0) === 0"></i>
+              {{ dashboardStats()?.pharmacyStats?.criticalStock ?? 0 }} stock{{ (dashboardStats()?.pharmacyStats?.criticalStock ?? 0) > 1 ? 's' : '' }} critique{{ (dashboardStats()?.pharmacyStats?.criticalStock ?? 0) > 1 ? 's' : '' }}
+            </p>
+          </div>
+          <div class="kpi-icon-box" style="background: #10b98120">
+            <i class="pi pi-box" style="color: #10b981"></i>
+          </div>
+        </div>
+        <p class="kpi-sub">Médicaments d'essai</p>
+      }
+    </div>
+
+  </div>
+  <!-- /kpi-grid -->
+
+  <!-- ═══════════════════════════════════════════════════════
+       GRILLE PRINCIPALE — Modules + Widgets latéraux
+  ═══════════════════════════════════════════════════════ -->
+  <div class="main-grid">
+
+    <!-- ── Colonne gauche : grille des modules ────────────── -->
+    <section class="modules-section">
+      <div class="section-header">
+        <h3 class="section-title">
+          <i class="pi pi-th-large"></i>
+          Modules
+        </h3>
+        <span class="section-badge">{{ visibleCards().length }} disponible{{ visibleCards().length > 1 ? 's' : '' }}</span>
+      </div>
+
+      @if (isLoading()) {
+        <div class="module-cards-grid">
+          @for (i of [1,2,3,4,5,6]; track i) {
+            <div class="module-card-skeleton">
+              <p-skeleton height="7rem" />
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="module-cards-grid">
+          @for (card of visibleCards(); track card.id; let idx = $index) {
+            <div
+              class="module-card"
+              [routerLink]="card.route"
+              pRipple
+              (mouseenter)="activeCardIndex.set(idx)"
+              (mouseleave)="activeCardIndex.set(-1)"
+              [class.module-card--active]="activeCardIndex() === idx"
+            >
+              <!-- En-tête coloré -->
+              <div class="module-card-header" [style.background]="'linear-gradient(135deg, ' + card.color + '18, ' + card.color + '08)'">
+                <div class="module-card-icon-wrap" [style.background]="card.colorLight" [style.border-color]="card.color + '40'">
+                  <i class="pi {{ card.icon }}" [style.color]="card.color"></i>
+                </div>
+                @if (card.badge) {
+                  <p-tag
+                    [value]="card.badge.label"
+                    [severity]="card.badge.severity"
+                    styleClass="module-badge"
+                  />
+                }
+              </div>
+
+              <!-- Corps de la card -->
+              <div class="module-card-body">
+                <h4 class="module-card-title">{{ card.title }}</h4>
+                <p class="module-card-subtitle">{{ card.subtitle }}</p>
+                @if (card.trend) {
+                  <p class="module-card-trend" [class.trend-up]="card.trendUp" [class.trend-neutral]="!card.trendUp">
+                    <i class="pi" [class.pi-arrow-up-right]="card.trendUp" [class.pi-minus]="!card.trendUp"></i>
+                    {{ card.trend }}
+                  </p>
+                }
+              </div>
+
+              <!-- Actions rapides -->
+              <div class="module-card-actions">
+                @for (action of card.actions; track action.label) {
+                  <a
+                    class="module-action-btn"
+                    [routerLink]="action.route"
+                    [queryParams]="action.queryParams"
+                    (click)="$event.stopPropagation()"
+                    [pTooltip]="action.label"
+                    tooltipPosition="top"
+                  >
+                    <i class="pi {{ action.icon }}"></i>
+                  </a>
+                }
+                <span class="module-card-arrow" [style.color]="card.color">
+                  <i class="pi pi-arrow-right"></i>
+                </span>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </section>
+
+    <!-- ── Colonne droite : widgets contextuels ───────────── -->
+    <aside class="widgets-section">
+
+      <!-- Widget : Tâches urgentes -->
+      <div class="widget urgent-tasks-widget">
+        <div class="widget-header">
+          <div class="widget-title-group">
+            <i class="pi pi-exclamation-circle widget-title-icon" style="color: #f59e0b"></i>
+            <h4 class="widget-title">Tâches urgentes</h4>
+          </div>
+          @if (urgentTasksCount() > 0) {
+            <span class="widget-count-badge">{{ urgentTasksCount() }}</span>
+          }
+        </div>
+
+        @if (isLoading()) {
+          <div class="tw-flex tw-flex-col tw-gap-3 tw-p-4">
+            @for (i of [1,2,3]; track i) {
+              <p-skeleton height="3.5rem" borderRadius="0.625rem" />
+            }
+          </div>
+        } @else if (filteredUrgentTasks().length === 0) {
+          <div class="widget-empty">
+            <i class="pi pi-check-circle widget-empty-icon" style="color: #22c55e"></i>
+            <p>Aucune tâche urgente</p>
+          </div>
+        } @else {
+          <ul class="urgent-tasks-list">
+            @for (task of filteredUrgentTasks(); track task.id) {
+              <li class="urgent-task-item" [routerLink]="task.route">
+                <div class="task-module-icon" [ngStyle]="{ color: getModuleColor(task.moduleIcon) }">
+                  <i class="pi {{ task.moduleIcon }}"></i>
+                </div>
+                <div class="task-body">
+                  <p class="task-title">{{ task.title }}</p>
+                  <p class="task-meta">
+                    <span class="task-module">{{ task.module }}</span>
+                    <span class="task-separator">·</span>
+                    <span class="task-deadline" [class]="deadlineClass(task.deadline)">
+                      {{ deadlineLabel(task.deadline) }}
+                    </span>
+                  </p>
+                </div>
+                <span class="task-priority-dot" [class]="priorityClass(task.priority)"></span>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+
+      <!-- Widget : Timeline des échéances -->
+      <div class="widget timeline-widget">
+        <div class="widget-header">
+          <div class="widget-title-group">
+            <i class="pi pi-calendar widget-title-icon" style="color: #1565c0"></i>
+            <h4 class="widget-title">Échéances cliniques</h4>
+          </div>
+        </div>
+
+        @if (isLoading()) {
+          <div class="tw-flex tw-flex-col tw-gap-3 tw-p-4">
+            @for (i of [1,2,3,4]; track i) {
+              <p-skeleton height="2.5rem" borderRadius="0.5rem" />
+            }
+          </div>
+        } @else if (filteredTimeline().length === 0) {
+          <div class="widget-empty">
+            <i class="pi pi-calendar-times widget-empty-icon" style="color: #64748b"></i>
+            <p>Aucune échéance prochaine</p>
+          </div>
+        } @else {
+          <ul class="timeline-list">
+            @for (item of filteredTimeline(); track item.id; let last = $last) {
+              <li class="timeline-item" [routerLink]="item.route">
+                <div class="timeline-line-col">
+                  <div class="timeline-dot" [style.background]="item.color" [style.border-color]="item.color + '60'">
+                    <i class="pi {{ item.icon }}" style="font-size: 0.625rem; color: white"></i>
+                  </div>
+                  @if (!last) {
+                    <div class="timeline-connector"></div>
+                  }
+                </div>
+                <div class="timeline-content">
+                  <p class="timeline-label">
+                    {{ item.label }}
+                    @if (item.isUrgent) {
+                      <span class="timeline-urgent-chip">Urgent</span>
+                    }
+                  </p>
+                  <p class="timeline-meta">
+                    <span class="timeline-module">{{ item.module }}</span>
+                    <span class="task-separator">·</span>
+                    <span class="timeline-date" [class.timeline-date--urgent]="item.isUrgent">
+                      {{ deadlineLabel(item.date) }}
+                    </span>
+                  </p>
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+
+    </aside>
+  </div>
+  <!-- /main-grid -->
+
+</div>
