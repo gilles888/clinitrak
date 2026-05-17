@@ -55,6 +55,9 @@ public class EthicsDashboardService {
      *   <li>Nombre de rapports annuels en retard</li>
      *   <li>Répartition des avis par décision</li>
      *   <li>5 derniers avis en attente</li>
+     *   <li>{@code pendingSubmissions} : alias de pendingReviews pour le widget frontend</li>
+     *   <li>{@code urgentDeadlines} : séances CE planifiées dans les 7 prochains jours</li>
+     *   <li>{@code averageProcessingDays} : délai moyen en jours entre soumission et décision (défaut 38.0)</li>
      * </ul>
      *
      * @return réponse agrégée du tableau de bord
@@ -104,8 +107,17 @@ public class EthicsDashboardService {
             .map(ethicsMapper::toResponse)
             .collect(Collectors.toList());
 
-        log.debug("Dashboard CE calculé pour tenant {} : {} avis en attente, {} réunions à venir",
-            tenantId, pendingReviews, upcomingMeetings);
+        // Séances CE dans les 7 prochains jours (deadlines urgentes)
+        long urgentDeadlines = meetingRepository.countByTenantIdAndStatusAndMeetingDateBetween(
+            tenantId, MeetingStatus.PLANNED, today, today.plusDays(7)
+        );
+
+        // Délai moyen de traitement (soumission → décision) — défaut 38.0 si aucune donnée
+        Double rawAverage = reviewRepository.computeAverageProcessingDays(tenantId);
+        double averageProcessingDays = rawAverage != null ? rawAverage : 38.0;
+
+        log.debug("Dashboard CE calculé pour tenant {} : {} avis en attente, {} réunions à venir, {} délais urgents",
+            tenantId, pendingReviews, upcomingMeetings, urgentDeadlines);
 
         return new EthicsDashboardResponse(
             pendingReviews,
@@ -115,7 +127,10 @@ public class EthicsDashboardService {
             annualReportsDue,
             annualReportsOverdue,
             reviewsByDecision,
-            recentPending
+            recentPending,
+            pendingReviews,      // pendingSubmissions = alias de pendingReviews
+            urgentDeadlines,
+            averageProcessingDays
         );
     }
 

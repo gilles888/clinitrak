@@ -18,6 +18,9 @@ import java.util.Map;
  * @param annualReportsOverdue    nombre de rapports annuels en retard
  * @param reviewsByDecision       répartition des avis par décision (APPROVED: 42, ...)
  * @param recentPendingReviews    5 derniers avis en attente (pour la vue rapide)
+ * @param pendingSubmissions      alias de pendingReviews — dossiers CE en statut PENDING (widget frontend)
+ * @param urgentDeadlines         nombre de séances CE dans les 7 prochains jours
+ * @param averageProcessingDays   délai moyen en jours entre soumission et décision CE
  */
 public record EthicsDashboardResponse(
     long pendingReviews,
@@ -27,5 +30,8 @@ public record EthicsDashboardResponse(
     long annualReportsDue,
     long annualReportsOverdue,
     Map<String, Long> reviewsByDecision,
-    List<EthicsReviewResponse> recentPendingReviews
+    List<EthicsReviewResponse> recentPendingReviews,
+    long pendingSubmissions,
+    long urgentDeadlines,
+    double averageProcessingDays
 ) {}

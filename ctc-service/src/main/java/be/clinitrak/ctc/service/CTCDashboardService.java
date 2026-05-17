@@ -55,6 +55,8 @@ public class CTCDashboardService {
      *   <li>Nombre de demandes statistiques en attente</li>
      *   <li>Nombre d'études gérées en tant que sponsor CUSL</li>
      *   <li>5 dernières demandes desk soumises</li>
+     *   <li>Dossiers actifs : demandes ASSIGNED ou IN_PROGRESS (widget frontend)</li>
+     *   <li>Demandes PENDING sans assigné : en attente de prise en charge (widget frontend)</li>
      * </ul>
      *
      * @return réponse agrégée du tableau de bord CTC
@@ -112,8 +114,19 @@ public class CTCDashboardService {
             .limit(5)
             .collect(Collectors.toList());
 
-        log.debug("Dashboard CTC calculé pour tenant {} : {} demandes, {} visites planifiées",
-            tenantId, totalDeskRequests, plannedVisits);
+        // Dossiers actifs : demandes en cours de traitement (ASSIGNED ou IN_PROGRESS)
+        long activeDossiers = allRequests.stream()
+            .filter(r -> r.status() == RequestStatus.ASSIGNED || r.status() == RequestStatus.IN_PROGRESS)
+            .count();
+
+        // Demandes PENDING non encore assignées — widget frontend "en attente de prise en charge"
+        long pendingManufacturing = allRequests.stream()
+            .filter(r -> r.status() == RequestStatus.PENDING
+                      && (r.assignedTo() == null || r.assignedTo().isBlank()))
+            .count();
+
+        log.debug("Dashboard CTC calculé pour tenant {} : {} demandes, {} visites planifiées, {} dossiers actifs",
+            tenantId, totalDeskRequests, plannedVisits, activeDossiers);
 
         return new CTCDashboardResponse(
             totalDeskRequests,
@@ -124,7 +137,9 @@ public class CTCDashboardService {
             activeContracts,
             pendingStatistics,
             sponsorStudies,
-            recentRequests
+            recentRequests,
+            activeDossiers,
+            pendingManufacturing
         );
     }
 

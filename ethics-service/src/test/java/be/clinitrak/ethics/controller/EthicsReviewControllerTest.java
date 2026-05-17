@@ -186,7 +186,8 @@ class EthicsReviewControllerTest {
         EthicsDashboardResponse dashboard = new EthicsDashboardResponse(
             5L, 3L, 2L, null, 4L, 1L,
             Map.of("PENDING", 5L, "APPROVED", 10L),
-            Collections.emptyList()
+            Collections.emptyList(),
+            5L, 1L, 38.0
         );
         when(dashboardService.getDashboard()).thenReturn(dashboard);
 

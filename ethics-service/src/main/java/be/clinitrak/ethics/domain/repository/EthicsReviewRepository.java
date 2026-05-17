@@ -106,4 +106,20 @@ public interface EthicsReviewRepository extends JpaRepository<EthicsReview, UUID
      */
     @Query("SELECT r.decision, COUNT(r) FROM EthicsReview r WHERE r.tenantId = :tenantId AND r.deleted = false GROUP BY r.decision")
     List<Object[]> countByDecisionAndTenantId(@Param("tenantId") UUID tenantId);
+
+    /**
+     * Calcule le délai moyen de traitement en jours entre la soumission et la décision CE.
+     *
+     * <p>Seuls les avis ayant une date de décision renseignée sont pris en compte.
+     * Retourne {@code null} si aucun avis décidé n'est disponible pour ce tenant.
+     * Utilise une requête native PostgreSQL pour calculer l'intervalle en jours.
+     *
+     * @param tenantId identifiant du tenant
+     * @return délai moyen en jours, ou null si aucune donnée disponible
+     */
+    @Query(value = "SELECT AVG(EXTRACT(EPOCH FROM (decision_date::timestamp - submission_date::timestamp)) / 86400.0) " +
+                   "FROM ethics_reviews " +
+                   "WHERE tenant_id = :tenantId AND decision_date IS NOT NULL AND deleted = false",
+           nativeQuery = true)
+    Double computeAverageProcessingDays(@Param("tenantId") UUID tenantId);
 }

@@ -131,7 +131,7 @@ class PharmacyDrugControllerTest {
     void getDashboard_shouldReturn200() throws Exception {
         // Given
         PharmacyDashboardResponse dashboard = new PharmacyDashboardResponse(
-            5L, 3L, 1L, 2L, 10L, 0L, List.of()
+            5L, 3L, 1L, 2L, 10L, 0L, List.of(), 7L, 2L
         );
         when(dashboardService.getDashboard(any())).thenReturn(dashboard);
 

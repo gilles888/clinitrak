@@ -62,4 +62,23 @@ public interface MeetingRepository extends JpaRepository<Meeting, UUID> {
      * @return nombre de réunions correspondantes
      */
     long countByTenantIdAndStatusAndMeetingDateAfter(UUID tenantId, MeetingStatus status, LocalDate after);
+
+    /**
+     * Compte les réunions planifiées dans une fenêtre de dates pour un tenant.
+     *
+     * <p>Utilisé pour les "deadlines urgentes" : séances CE dont la date est
+     * comprise entre aujourd'hui (inclus) et dans 7 jours (inclus).
+     *
+     * @param tenantId  identifiant du tenant
+     * @param status    statut des réunions (typiquement {@link MeetingStatus#PLANNED})
+     * @param from      date de début de la fenêtre (inclusive)
+     * @param to        date de fin de la fenêtre (inclusive)
+     * @return nombre de réunions dans cet intervalle
+     */
+    long countByTenantIdAndStatusAndMeetingDateBetween(
+        UUID tenantId,
+        MeetingStatus status,
+        LocalDate from,
+        LocalDate to
+    );
 }
