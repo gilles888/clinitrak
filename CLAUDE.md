@@ -197,11 +197,15 @@ Ports production :
 - [x] **pharmacy-service** complet (AES-256, Apache POI, Flying Saucer, alertes @Scheduled, levée d'aveugle, 12 endpoints)
 - [x] **exchange-service** complet (JWT externe distinct, register+verify email, CRUD demandes, messagerie, endpoints internes)
 - [x] **admin-service** complet (gestion tenants, invitation utilisateurs, audit logs, export Excel, health check)
+- [x] **Endpoints dashboard** étendus (session 11) :
+  - `GET /api/v1/ethics/dashboard` : +pendingSubmissions, +urgentDeadlines, +averageProcessingDays
+  - `GET /api/v1/ctc/dashboard` : +activeDossiers, +pendingManufacturing
+  - `GET /api/v1/pharmacy/dashboard` : +dispensationsToday, +criticalStock
 - [x] **Angular 20** structure complète :
   - Auth store (signals), guards, intercepteurs
   - Layout (sidebar collapsible + topbar)
   - Page login (PrimeNG 17 + Tailwind)
-  - Dashboard skeleton
+  - Dashboard complet (session 11) : vraies données HTTP, signals, filtrage RBAC, glassmorphism
   - Toutes les routes lazy-loaded
 - [x] Docker Compose (postgres, redis, minio, mailhog, auth, study, ethics, ctc, pharmacy, exchange, document, notification, batch, admin, gateway)
 - [x] `.env.example`, `.gitignore`, `Dockerfile` multi-stage (un par service — tous les services)
@@ -238,6 +242,8 @@ Ports production :
 
 3. **Priorité BASSE** :
    - CI/CD : connecter deploy-staging.yml à une vraie infrastructure
+
+> **Session 11 (2026-05-17)** : Dashboard Angular pleinement opérationnel. Les modules documents et notifications (SSE) restent à implémenter côté frontend.
 
 ---
 

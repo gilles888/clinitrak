@@ -11,6 +11,71 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ---
 
+## [0.10.0] — 2026-05-17
+
+### Session 11 — Refonte complète du tableau de bord Angular + endpoints dashboard backend
+
+**Agents impliqués** : frontend, backend
+
+#### Ajouté — Dashboard Angular (`clinitrak-frontend/src/app/features/dashboard/`)
+
+- `dashboard.models.ts` : interfaces TypeScript dédiées au dashboard
+  - `DashboardCard` : configuration des cartes de module (route, icon, color, roles requis)
+  - `UrgentTask` : tâche urgente avec moduleRoute pour le filtrage RBAC
+  - `TimelineItem` : événement timeline avec moduleRoute pour le filtrage RBAC
+  - `DashboardStats` et sous-types par module (StudyStats, EthicsStats, CtcStats, PharmacyStats, ExchangeStats, AdminStats)
+
+- `dashboard.service.ts` : service Angular chargement parallèle des données réelles
+  - `forkJoin` sur tous les modules pour un seul rendu cohérent
+  - Appels HTTP vers les vrais endpoints backend : study, ethics, ctc, pharmacy, exchange, admin
+  - Gestion d'erreur par module (un service DOWN ne bloque pas les autres)
+
+- `dashboard.component.ts` : composant standalone Angular 20 avec signals
+  - `visibleCards` : computed RBAC — filtre les cartes selon les rôles du user connecté
+  - `allowedRoutes` : computed dérivé de `visibleCards` pour filtrer tâches et timeline
+  - `filteredUrgentTasks` : computed — masque les tâches des modules inaccessibles
+  - `filteredTimeline` : computed — masque les événements timeline des modules inaccessibles
+  - Animation count-up au chargement des KPIs
+  - Raccourci clavier Ctrl+K (recherche globale, préparation future)
+
+- `dashboard.component.html` : template complet
+  - Header avec salutation personnalisée (nom du user via signal)
+  - Bandeau alertes urgentes (stock critique, délais CE, etc.)
+  - Grille KPI adaptative selon les droits RBAC
+  - Module-cards avec stats secondaires et liens directs
+  - Widget tâches urgentes avec badges de priorité
+  - Widget timeline des derniers événements
+
+- `dashboard.component.scss` : design system cohérent avec la page login
+  - Glassmorphism (backdrop-filter blur, transparence)
+  - Tokens couleurs par module (étude, ethics, ctc, pharmacy, exchange, admin)
+  - Transitions et hover sur les cards
+  - Responsive grid (1 col mobile, 2 col tablette, 3-4 col desktop)
+
+#### Ajouté — Endpoints dashboard backend (3 services)
+
+- **ethics-service** — `GET /api/v1/ethics/dashboard` : 3 champs supplémentaires
+  - `pendingSubmissions` : nb de soumissions en attente de décision CE
+  - `urgentDeadlines` : nb de rapports annuels dont l'échéance est dans les 30 jours
+  - `averageProcessingDays` : durée moyenne de traitement des avis (JPQL native)
+  - Fichiers modifiés : `EthicsDashboardResponse` (record étendu), `EthicsDashboardService`, `EthicsReviewRepository`
+
+- **ctc-service** — `GET /api/v1/ctc/dashboard` : 2 champs supplémentaires
+  - `activeDossiers` : nb de dossiers CTC actifs (statut non terminal)
+  - `pendingManufacturing` : nb de demandes en attente de fabrication cellulaire
+  - Fichiers modifiés : `CtcDashboardResponse` (record étendu), `CTCDashboardService`, `TrialDeskRequestRepository`
+
+- **pharmacy-service** — `GET /api/v1/pharmacy/dashboard` : 2 champs supplémentaires
+  - `dispensationsToday` : nb de dispensations effectuées aujourd'hui
+  - `criticalStock` : nb de médicaments en rupture ou stock critique (< seuil)
+  - Fichiers modifiés : `PharmacyDashboardResponse` (record étendu), `PharmacyDashboardService`, `DrugStockRepository`
+
+#### Modifié
+
+- `dashboard.component.ts` : remplacement du skeleton statique (session 2) par le composant complet avec vraies données
+
+---
+
 ## [0.9.1] — 2026-05-12
 
 ### Session 10 — Déploiement production effectif + corrections
